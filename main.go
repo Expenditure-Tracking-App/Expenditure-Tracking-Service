@@ -16,9 +16,13 @@ type UserSession struct {
 
 // Questions array for the process
 var questions = []string{
-	"What is your name?",
-	"How old are you? (please enter a number)",
-	"What city do you live in?",
+	"What is the name of the transaction?",
+	"How much is the transaction?",
+	"What currency is the transaction in?",
+	"Date of transaction?",
+	"Indicate the date",
+	"Is it claimable?",
+	"Is it payable for the family?",
 }
 
 // Map to track ongoing sessions (active users)
@@ -55,8 +59,8 @@ func processMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	chatID := message.Chat.ID
 
 	// Handle start command to begin the Q&A process
-	if message.Text == "/start" {
-		startSession(bot, chatID, message.From.UserName)
+	if message.Text == "/add" {
+		startSession(bot, chatID)
 		return
 	}
 
@@ -67,18 +71,15 @@ func processMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	}
 
 	// If no session is active, guide the user
-	msg := tgbotapi.NewMessage(chatID, "Send /start to begin!")
+	msg := tgbotapi.NewMessage(chatID, "Send /add to begin!")
 	bot.Send(msg)
 }
 
 // Start a new Q&A session
-func startSession(bot *tgbotapi.BotAPI, chatID int64, username string) {
+func startSession(bot *tgbotapi.BotAPI, chatID int64) {
 	// Create a session for the user
 	userSessions[chatID] = &UserSession{
 		CurrentQuestion: 0, // Start at the first question
-		Answers: Transaction{
-			Amount: username,
-		},
 	}
 
 	// Ask the first question
@@ -98,17 +99,17 @@ func askCurrentQuestion(bot *tgbotapi.BotAPI, chatID int64) {
 // Process the user's answer and move to the next question
 func processAnswer(bot *tgbotapi.BotAPI, chatID int64, session *UserSession, answer string) {
 	switch session.CurrentQuestion {
-	case 0: // First question: currency
-		session.Answers.Currency = answer
-	case 1: // Second question: category (validate as integer)
-		var age int
-		if _, err := fmt.Sscanf(answer, "%d", &age); err != nil {
+	case 0: // First question: name of transaction
+		session.Answers.Name = answer
+	case 1: // Second question: name of transaction (validate as float)
+		var name string
+		if _, err := fmt.Sscanf(answer, "%d", &name); err != nil {
 			// If the input is not valid, ask again
-			msg := tgbotapi.NewMessage(chatID, "Please enter a valid number for your age!")
+			msg := tgbotapi.NewMessage(chatID, "Please enter a valid number for your amount!")
 			bot.Send(msg)
 			return
 		}
-		session.Answers.Category = age
+		session.Answers.Name = name
 	case 2: // Third question: isClaimable
 		session.Answers.IsClaimable = answer
 	}
