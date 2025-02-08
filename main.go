@@ -1,186 +1,163 @@
 package main
 
 import (
-	"bufio"
-	"context"
+	"encoding/json"
+	"fmt"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"os"
-	"strings"
-
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-var (
-	// Menu texts
-	firstMenu  = "<b>Menu 1</b>\n\nA beautiful menu with a shiny inline button."
-	secondMenu = "<b>Menu 2</b>\n\nA better menu with even more shiny inline buttons."
+// Session to track user's Q&A flow
+type UserSession struct {
+	CurrentQuestion int         // Index of the current question
+	Answers         Transaction // Struct to store responses
+}
 
-	// Button texts
-	nextButton     = "Next"
-	backButton     = "Back"
-	tutorialButton = "Tutorial"
+// Questions array for the process
+var questions = []string{
+	"What is your name?",
+	"How old are you? (please enter a number)",
+	"What city do you live in?",
+}
 
-	// Store bot screaming status
-	screaming = false
-	bot       *tgbotapi.BotAPI
+// Map to track ongoing sessions (active users)
+var userSessions = make(map[int64]*UserSession)
 
-	// Keyboard layout for the first menu. One button, one row
-	firstMenuMarkup = tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(nextButton, nextButton),
-		),
-	)
-
-	// Keyboard layout for the second menu. Two buttons, one per row
-	secondMenuMarkup = tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(backButton, backButton),
-		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonURL(tutorialButton, "https://core.telegram.org/bots/api"),
-		),
-	)
-)
+// File to save responses
+const SaveFilePath = "responses.txt"
 
 func main() {
-	var err error
-	bot, err = tgbotapi.NewBotAPI("")
+	token, err := os.ReadFile("token.txt")
+
+	bot, err := tgbotapi.NewBotAPI(string(token))
 	if err != nil {
-		// Abort if something is wrong
 		log.Panic(err)
 	}
 
-	// Set this to true to log all interactions with telegram servers
-	bot.Debug = false
+	bot.Debug = true
+	log.Printf("Authorized on account %s", bot.Self.UserName)
 
+	// Listen for incoming updates
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-
-	// Create a new cancellable background context. Calling `cancel()` leads to the cancellation of the context
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-
-	// `updates` is a golang channel which receives telegram updates
 	updates := bot.GetUpdatesChan(u)
 
-	// Pass cancellable context to goroutine
-	go receiveUpdates(ctx, updates)
-
-	// Tell the user the bot is online
-	log.Println("Start listening for updates. Press enter to stop")
-
-	// Wait for a newline symbol, then cancel handling updates
-	bufio.NewReader(os.Stdin).ReadBytes('\n')
-	cancel()
-
-}
-
-func receiveUpdates(ctx context.Context, updates tgbotapi.UpdatesChannel) {
-	// `for {` means the loop is infinite until we manually stop it
-	for {
-		select {
-		// stop looping if ctx is cancelled
-		case <-ctx.Done():
-			return
-		// receive update from channel and then handle it
-		case update := <-updates:
-			handleUpdate(update)
+	for update := range updates {
+		if update.Message != nil {
+			processMessage(bot, update.Message)
 		}
 	}
 }
 
-func handleUpdate(update tgbotapi.Update) {
-	switch {
-	// Handle messages
-	case update.Message != nil:
-		handleMessage(update.Message)
-		break
+// Handle incoming messages
+func processMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+	chatID := message.Chat.ID
 
-	// Handle button clicks
-	case update.CallbackQuery != nil:
-		handleButton(update.CallbackQuery)
-		break
-	}
-}
-
-func handleMessage(message *tgbotapi.Message) {
-	user := message.From
-	text := message.Text
-
-	if user == nil {
+	// Handle start command to begin the Q&A process
+	if message.Text == "/start" {
+		startSession(bot, chatID, message.From.UserName)
 		return
 	}
 
-	// Print to console
-	log.Printf("%s wrote %s", user.FirstName, text)
-
-	var err error
-	if strings.HasPrefix(text, "/") {
-		err = handleCommand(message.Chat.ID, text)
-	} else if screaming && len(text) > 0 {
-		msg := tgbotapi.NewMessage(message.Chat.ID, strings.ToUpper(text))
-		// To preserve markdown, we attach entities (bold, italic..)
-		msg.Entities = message.Entities
-		_, err = bot.Send(msg)
-	} else {
-		// This is equivalent to forwarding, without the sender's name
-		copyMsg := tgbotapi.NewCopyMessage(message.Chat.ID, message.Chat.ID, message.MessageID)
-		_, err = bot.CopyMessage(copyMsg)
+	// If the user is in the middle of a session, process their answer
+	if session, exists := userSessions[chatID]; exists {
+		processAnswer(bot, chatID, session, message.Text)
+		return
 	}
 
-	if err != nil {
-		log.Printf("An error occured: %s", err.Error())
-	}
-}
-
-// When we get a command, we react accordingly
-func handleCommand(chatId int64, command string) error {
-	var err error
-
-	switch command {
-	case "/scream":
-		screaming = true
-		break
-
-	case "/whisper":
-		screaming = false
-		break
-
-	case "/menu":
-		err = sendMenu(chatId)
-		break
-	}
-
-	return err
-}
-
-func handleButton(query *tgbotapi.CallbackQuery) {
-	var text string
-
-	markup := tgbotapi.NewInlineKeyboardMarkup()
-	message := query.Message
-
-	if query.Data == nextButton {
-		text = secondMenu
-		markup = secondMenuMarkup
-	} else if query.Data == backButton {
-		text = firstMenu
-		markup = firstMenuMarkup
-	}
-
-	callbackCfg := tgbotapi.NewCallback(query.ID, "")
-	bot.Send(callbackCfg)
-
-	// Replace menu text and keyboard
-	msg := tgbotapi.NewEditMessageTextAndMarkup(message.Chat.ID, message.MessageID, text, markup)
-	msg.ParseMode = tgbotapi.ModeHTML
+	// If no session is active, guide the user
+	msg := tgbotapi.NewMessage(chatID, "Send /start to begin!")
 	bot.Send(msg)
 }
 
-func sendMenu(chatId int64) error {
-	msg := tgbotapi.NewMessage(chatId, firstMenu)
-	msg.ParseMode = tgbotapi.ModeHTML
-	msg.ReplyMarkup = firstMenuMarkup
-	_, err := bot.Send(msg)
-	return err
+// Start a new Q&A session
+func startSession(bot *tgbotapi.BotAPI, chatID int64, username string) {
+	// Create a session for the user
+	userSessions[chatID] = &UserSession{
+		CurrentQuestion: 0, // Start at the first question
+		Answers: Transaction{
+			Amount: username,
+		},
+	}
+
+	// Ask the first question
+	askCurrentQuestion(bot, chatID)
+}
+
+// Ask the current question in the session
+func askCurrentQuestion(bot *tgbotapi.BotAPI, chatID int64) {
+	session := userSessions[chatID]
+	question := questions[session.CurrentQuestion]
+
+	// Send the current question to the user
+	msg := tgbotapi.NewMessage(chatID, question)
+	bot.Send(msg)
+}
+
+// Process the user's answer and move to the next question
+func processAnswer(bot *tgbotapi.BotAPI, chatID int64, session *UserSession, answer string) {
+	switch session.CurrentQuestion {
+	case 0: // First question: currency
+		session.Answers.Currency = answer
+	case 1: // Second question: category (validate as integer)
+		var age int
+		if _, err := fmt.Sscanf(answer, "%d", &age); err != nil {
+			// If the input is not valid, ask again
+			msg := tgbotapi.NewMessage(chatID, "Please enter a valid number for your age!")
+			bot.Send(msg)
+			return
+		}
+		session.Answers.Category = age
+	case 2: // Third question: isClaimable
+		session.Answers.IsClaimable = answer
+	}
+
+	// Move to the next question
+	session.CurrentQuestion++
+
+	// If all questions are answered, finish the session
+	if session.CurrentQuestion >= len(questions) {
+		finishSession(bot, chatID, session)
+		return
+	}
+
+	// Otherwise, ask the next question
+	askCurrentQuestion(bot, chatID)
+}
+
+// Finish the Q&A session
+func finishSession(bot *tgbotapi.BotAPI, chatID int64, session *UserSession) {
+	// Save the responses to a file
+	saveResponseToFile(session.Answers)
+
+	// Send a thank-you message and confirmation
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Thank you for your responses, %s!\n\nHere are your answers:\nName: %s\nAge: %d\nCity: %s",
+		session.Answers.Amount, session.Answers.Currency, session.Answers.Category, session.Answers.IsClaimable))
+	bot.Send(msg)
+
+	// Clean up the session
+	delete(userSessions, chatID)
+}
+
+// Save responses to a text file
+func saveResponseToFile(response Transaction) {
+	file, err := os.OpenFile(SaveFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Printf("Error opening file: %v", err)
+		return
+	}
+	defer file.Close()
+
+	// Serialize the response as JSON and write it to the file
+	data, err := json.Marshal(response)
+	if err != nil {
+		log.Printf("Error marshaling response: %v", err)
+		return
+	}
+
+	_, err = file.WriteString(fmt.Sprintf("%s\n", data))
+	if err != nil {
+		log.Printf("Error writing to file: %v", err)
+	}
 }
