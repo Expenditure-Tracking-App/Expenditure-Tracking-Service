@@ -33,6 +33,9 @@ const SaveFilePath = "responses.txt"
 
 func main() {
 	token, err := os.ReadFile("token.txt")
+	if err != nil {
+		log.Panic(err)
+	}
 
 	bot, err := tgbotapi.NewBotAPI(string(token))
 	if err != nil {
@@ -171,8 +174,9 @@ func finishSession(bot *tgbotapi.BotAPI, chatID int64, session *UserSession) err
 	saveResponseToFile(session.Answers)
 
 	// Send a thank-you message and confirmation
-	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Thank you for your responses, %s!\n\nHere are your answers:\nName: %s\nAge: %d\nCity: %s",
-		session.Answers.Amount, session.Answers.Currency, session.Answers.Category, session.Answers.IsClaimable))
+	msg := tgbotapi.NewMessage(chatID,
+		fmt.Sprintf("Thank you for your responses, %v!\n\nHere are your answers:\nName: %s\nAge: %d\nCity: %s",
+			session.Answers.Amount, session.Answers.Currency, session.Answers.Category, session.Answers.IsClaimable))
 	_, err := bot.Send(msg)
 	if err != nil {
 		return err
