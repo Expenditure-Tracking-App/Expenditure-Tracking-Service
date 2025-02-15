@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-// Session to track user's Q&A flow
+// UserSession - Session to track user's Q&A flow
 type UserSession struct {
 	CurrentQuestion int         // Index of the current question
 	Answers         Transaction // Struct to store responses
@@ -28,7 +28,7 @@ var questions = []string{
 // Map to track ongoing sessions (active users)
 var userSessions = make(map[int64]*UserSession)
 
-// File to save responses
+// SaveFilePath File to save responses
 const SaveFilePath = "responses.txt"
 
 func main() {
@@ -49,55 +49,80 @@ func main() {
 
 	for update := range updates {
 		if update.Message != nil {
-			processMessage(bot, update.Message)
+			err = processMessage(bot, update.Message)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}
 }
 
 // Handle incoming messages
-func processMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+func processMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) error {
 	chatID := message.Chat.ID
 
 	// Handle start command to begin the Q&A process
 	if message.Text == "/add" {
-		startSession(bot, chatID)
-		return
+		err := startSession(bot, chatID)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	// If the user is in the middle of a session, process their answer
 	if session, exists := userSessions[chatID]; exists {
-		processAnswer(bot, chatID, session, message.Text)
-		return
+		err := processAnswer(bot, chatID, session, message.Text)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	// If no session is active, guide the user
 	msg := tgbotapi.NewMessage(chatID, "Send /add to begin!")
-	bot.Send(msg)
+	_, err := bot.Send(msg)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Start a new Q&A session
-func startSession(bot *tgbotapi.BotAPI, chatID int64) {
+func startSession(bot *tgbotapi.BotAPI, chatID int64) error {
 	// Create a session for the user
 	userSessions[chatID] = &UserSession{
 		CurrentQuestion: 0, // Start at the first question
 	}
 
 	// Ask the first question
-	askCurrentQuestion(bot, chatID)
+	err := askCurrentQuestion(bot, chatID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Ask the current question in the session
-func askCurrentQuestion(bot *tgbotapi.BotAPI, chatID int64) {
+func askCurrentQuestion(bot *tgbotapi.BotAPI, chatID int64) error {
 	session := userSessions[chatID]
 	question := questions[session.CurrentQuestion]
 
 	// Send the current question to the user
 	msg := tgbotapi.NewMessage(chatID, question)
-	bot.Send(msg)
+	_, err := bot.Send(msg)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Process the user's answer and move to the next question
-func processAnswer(bot *tgbotapi.BotAPI, chatID int64, session *UserSession, answer string) {
+func processAnswer(bot *tgbotapi.BotAPI, chatID int64, session *UserSession, answer string) error {
 	switch session.CurrentQuestion {
 	case 0: // First question: name of transaction
 		session.Answers.Name = answer
@@ -106,8 +131,12 @@ func processAnswer(bot *tgbotapi.BotAPI, chatID int64, session *UserSession, ans
 		if _, err := fmt.Sscanf(answer, "%d", &name); err != nil {
 			// If the input is not valid, ask again
 			msg := tgbotapi.NewMessage(chatID, "Please enter a valid number for your amount!")
-			bot.Send(msg)
-			return
+			_, err = bot.Send(msg)
+			if err != nil {
+				return err
+			}
+
+			return nil
 		}
 		session.Answers.Name = name
 	case 2: // Third question: isClaimable
@@ -119,26 +148,39 @@ func processAnswer(bot *tgbotapi.BotAPI, chatID int64, session *UserSession, ans
 
 	// If all questions are answered, finish the session
 	if session.CurrentQuestion >= len(questions) {
-		finishSession(bot, chatID, session)
-		return
+		err := finishSession(bot, chatID, session)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	// Otherwise, ask the next question
-	askCurrentQuestion(bot, chatID)
+	err := askCurrentQuestion(bot, chatID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Finish the Q&A session
-func finishSession(bot *tgbotapi.BotAPI, chatID int64, session *UserSession) {
+func finishSession(bot *tgbotapi.BotAPI, chatID int64, session *UserSession) error {
 	// Save the responses to a file
 	saveResponseToFile(session.Answers)
 
 	// Send a thank-you message and confirmation
 	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Thank you for your responses, %s!\n\nHere are your answers:\nName: %s\nAge: %d\nCity: %s",
 		session.Answers.Amount, session.Answers.Currency, session.Answers.Category, session.Answers.IsClaimable))
-	bot.Send(msg)
+	_, err := bot.Send(msg)
+	if err != nil {
+		return err
+	}
 
 	// Clean up the session
 	delete(userSessions, chatID)
+	return nil
 }
 
 // Save responses to a text file
@@ -148,7 +190,12 @@ func saveResponseToFile(response Transaction) {
 		log.Printf("Error opening file: %v", err)
 		return
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.Printf("Error closing file: %v", err)
+		}
+	}(file)
 
 	// Serialize the response as JSON and write it to the file
 	data, err := json.Marshal(response)
