@@ -6,6 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"os"
+	"strconv"
 )
 
 // UserSession - Session to track user's Q&A flow
@@ -19,8 +20,7 @@ var questions = []string{
 	"What is the name of the transaction?",
 	"How much is the transaction?",
 	"What currency is the transaction in?",
-	"Date of transaction?",
-	"Indicate the date",
+	"What is the date of transaction?",
 	"Is it claimable?",
 	"Is it payable for the family?",
 }
@@ -30,6 +30,9 @@ var userSessions = make(map[int64]*UserSession)
 
 // SaveFilePath File to save responses
 const SaveFilePath = "responses.txt"
+
+// Available currencies
+var currencies = []string{"USD", "EUR", "JPY", "SGD", "MYR"}
 
 func main() {
 	token, err := os.ReadFile("token.txt")
@@ -53,6 +56,12 @@ func main() {
 	for update := range updates {
 		if update.Message != nil {
 			err = processMessage(bot, update.Message)
+			if err != nil {
+				log.Println(err)
+			}
+		} else if update.CallbackQuery != nil {
+			// Handle callback queries (button presses)
+			err = processCallbackQuery(bot, update.CallbackQuery)
 			if err != nil {
 				log.Println(err)
 			}
@@ -116,6 +125,27 @@ func askCurrentQuestion(bot *tgbotapi.BotAPI, chatID int64) error {
 
 	// Send the current question to the user
 	msg := tgbotapi.NewMessage(chatID, question)
+
+	if session.CurrentQuestion == 4 || session.CurrentQuestion == 5 {
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Yes", "yes"),
+				tgbotapi.NewInlineKeyboardButtonData("No", "no"),
+			),
+		)
+		msg.ReplyMarkup = keyboard
+	}
+
+	if session.CurrentQuestion == 2 {
+		// Create currency buttons
+		var currencyButtons []tgbotapi.InlineKeyboardButton
+		for _, currency := range currencies {
+			currencyButtons = append(currencyButtons, tgbotapi.NewInlineKeyboardButtonData(currency, currency))
+		}
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(currencyButtons...))
+		msg.ReplyMarkup = keyboard
+	}
+
 	_, err := bot.Send(msg)
 	if err != nil {
 		return err
@@ -126,24 +156,29 @@ func askCurrentQuestion(bot *tgbotapi.BotAPI, chatID int64) error {
 
 // Process the user's answer and move to the next question
 func processAnswer(bot *tgbotapi.BotAPI, chatID int64, session *UserSession, answer string) error {
+	var err error
 	switch session.CurrentQuestion {
 	case 0: // First question: name of transaction
 		session.Answers.Name = answer
-	case 1: // Second question: name of transaction (validate as float)
-		var name string
-		if _, err := fmt.Sscanf(answer, "%d", &name); err != nil {
-			// If the input is not valid, ask again
-			msg := tgbotapi.NewMessage(chatID, "Please enter a valid number for your amount!")
-			_, err = bot.Send(msg)
-			if err != nil {
-				return err
-			}
-
-			return nil
+	case 1: // Second question: value of transaction (validate as float)
+		session.Answers.Amount, err = parseFloat32(answer)
+		if err != nil {
+			return fmt.Errorf("invalid amount: %w", err)
 		}
-		session.Answers.Name = name
-	case 2: // Third question: isClaimable
-		session.Answers.IsClaimable = answer
+	case 2: // Third question: currency of transaction
+		session.Answers.Currency = answer
+	case 3: // Fourth question: date of transaction
+		session.Answers.Date = answer
+	case 4: // Fifth question: is it Claimable
+		session.Answers.IsClaimable, err = parseBool(answer)
+		if err != nil {
+			return fmt.Errorf("invalid claimable value: %w", err)
+		}
+	case 5:
+		session.Answers.PaidForFamily, err = parseBool(answer)
+		if err != nil {
+			return fmt.Errorf("invalid paid for family value: %w", err)
+		}
 	}
 
 	// Move to the next question
@@ -160,7 +195,7 @@ func processAnswer(bot *tgbotapi.BotAPI, chatID int64, session *UserSession, ans
 	}
 
 	// Otherwise, ask the next question
-	err := askCurrentQuestion(bot, chatID)
+	err = askCurrentQuestion(bot, chatID)
 	if err != nil {
 		return err
 	}
@@ -175,8 +210,8 @@ func finishSession(bot *tgbotapi.BotAPI, chatID int64, session *UserSession) err
 
 	// Send a thank-you message and confirmation
 	msg := tgbotapi.NewMessage(chatID,
-		fmt.Sprintf("Thank you for your responses, %v!\n\nHere are your answers:\nName: %s\nAge: %d\nCity: %s",
-			session.Answers.Amount, session.Answers.Currency, session.Answers.Category, session.Answers.IsClaimable))
+		fmt.Sprintf("Thank you for your responses!\n\nHere are your answers:\nName: %s\nAmount: %f\nCurrency: %s\nDate: %s\nIs Claimable: %t\nPaid for Family: %t",
+			session.Answers.Name, session.Answers.Amount, session.Answers.Currency, session.Answers.Date, session.Answers.IsClaimable, session.Answers.PaidForFamily))
 	_, err := bot.Send(msg)
 	if err != nil {
 		return err
@@ -212,4 +247,75 @@ func saveResponseToFile(response Transaction) {
 	if err != nil {
 		log.Printf("Error writing to file: %v", err)
 	}
+}
+
+func parseFloat32(s string) (float32, error) {
+	f, err := strconv.ParseFloat(s, 32)
+	if err != nil {
+		return 0, err
+	}
+	return float32(f), nil
+}
+
+func parseBool(s string) (bool, error) {
+	b, err := strconv.ParseBool(s)
+	if err != nil {
+		return false, err
+	}
+	return b, nil
+}
+
+func processCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) error {
+	chatID := callbackQuery.Message.Chat.ID
+	session, exists := userSessions[chatID]
+	if !exists {
+		return fmt.Errorf("session not found for chat ID: %d", chatID)
+	}
+
+	// Update the answer based on the button pressed
+	switch callbackQuery.Data {
+	case "yes":
+		if session.CurrentQuestion == 4 {
+			session.Answers.IsClaimable = true
+		} else if session.CurrentQuestion == 5 {
+			session.Answers.PaidForFamily = true
+		}
+	case "no":
+		if session.CurrentQuestion == 4 {
+			session.Answers.IsClaimable = false
+		} else if session.CurrentQuestion == 5 {
+			session.Answers.PaidForFamily = false
+		}
+	default:
+		// Handle currency selection
+		if session.CurrentQuestion == 2 {
+			session.Answers.Currency = callbackQuery.Data
+		}
+	}
+
+	// Move to the next question
+	session.CurrentQuestion++
+
+	// If all questions are answered, finish the session
+	if session.CurrentQuestion >= len(questions) {
+		err := finishSession(bot, chatID, session)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// Otherwise, ask the next question
+	err := askCurrentQuestion(bot, chatID)
+	if err != nil {
+		return err
+	}
+
+	// Respond to the callback query to remove the loading indicator
+	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
+	if _, err := bot.Request(callback); err != nil {
+		return err
+	}
+
+	return nil
 }
