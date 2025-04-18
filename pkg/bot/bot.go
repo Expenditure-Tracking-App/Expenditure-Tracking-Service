@@ -56,8 +56,8 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 		return b.startSession(chatID, userSessions)
 	}
 
-	if userSession, exists := userSessions[chatID]; exists {
-		return b.handleAnswer(chatID, userSession, message.Text)
+	if _, exists := userSessions[chatID]; exists {
+		return b.handleAnswer(chatID, userSessions, message.Text)
 	}
 
 	msg := tgbotapi.NewMessage(chatID, "Send /add to begin!")
@@ -102,17 +102,17 @@ func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.U
 }
 
 // handleAnswer processes the user's answer.
-func (b *Bot) handleAnswer(chatID int64, session *session.UserSession, answer string) error {
-	err := session.HandleAnswer(answer)
+func (b *Bot) handleAnswer(chatID int64, individualSession map[int64]*session.UserSession, answer string) error {
+	err := individualSession[chatID].HandleAnswer(answer)
 	if err != nil {
 		return err
 	}
 
-	if session.IsSessionComplete() {
-		return b.completeSession(chatID, session)
+	if individualSession[chatID].IsSessionComplete() {
+		return b.completeSession(chatID, individualSession[chatID])
 	}
 
-	return b.askCurrentQuestion(chatID, userSessions)
+	return b.askCurrentQuestion(chatID, individualSession)
 }
 
 // completeSession finishes the session.
@@ -122,6 +122,7 @@ func (b *Bot) completeSession(chatID int64, session *session.UserSession) error 
 	msg := tgbotapi.NewMessage(chatID,
 		fmt.Sprintf("Thank you for your responses!\n\nHere are your answers:\nName: %s\nAmount: %f\nCurrency: %s\nDate: %s\nIs Claimable: %t\nPaid for Family: %t",
 			session.Answers.Name, session.Answers.Amount, session.Answers.Currency, session.Answers.Date, session.Answers.IsClaimable, session.Answers.PaidForFamily))
+
 	_, err := b.api.Send(msg)
 	if err != nil {
 		return err
