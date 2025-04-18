@@ -128,6 +128,11 @@ func (b *Bot) completeSession(chatID int64, session *session.UserSession) error 
 		return err
 	}
 
+	_, err = b.api.Send(tgbotapi.NewMessage(chatID, "Send /add to begin!"))
+	if err != nil {
+		return err
+	}
+
 	delete(userSessions, chatID)
 	return nil
 }
