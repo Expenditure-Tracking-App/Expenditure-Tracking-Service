@@ -3,6 +3,7 @@ package transaction
 import (
 	"fmt"
 	"strconv"
+	"time"
 )
 
 // Transaction represents a user's transaction data.
@@ -31,4 +32,17 @@ func ValidateBool(s string) (bool, error) {
 		return false, fmt.Errorf("invalid boolean value: %w", err)
 	}
 	return b, nil
+}
+
+func ProcessDate(answer string) string {
+	if answer == "t" {
+		return time.Now().Format("2006-01-02")
+	}
+
+	t, err := time.Parse("02.01.2006", answer)
+	if err != nil {
+		return time.Now().Format("2006-01-02")
+	}
+
+	return t.Format("2006-01-02")
 }
