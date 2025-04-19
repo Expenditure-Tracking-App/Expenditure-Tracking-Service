@@ -61,7 +61,7 @@ func (s *UserSession) HandleAnswer(answer string) error {
 	case QuestionCurrency:
 		s.Answers.Currency = answer
 	case QuestionDate:
-		s.Answers.Date = answer
+		s.Answers.Date = transaction.ProcessDate(answer)
 	case QuestionIsClaimable:
 		s.Answers.IsClaimable, err = transaction.ValidateBool(answer)
 		if err != nil {
