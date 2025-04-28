@@ -10,6 +10,7 @@ import (
 
 // Map to track ongoing sessions (active users)
 var userSessions = make(map[int64]*session.UserSession)
+var useDBToSave = false
 
 // Bot represents the Telegram bot.
 type Bot struct {
@@ -117,14 +118,32 @@ func (b *Bot) handleAnswer(chatID int64, individualSession map[int64]*session.Us
 
 // completeSession finishes the session.
 func (b *Bot) completeSession(chatID int64, session *session.UserSession) error {
-	storage.SaveResponseToFile(session.Answers)
+	if useDBToSave {
+		// Save the responses to the database
+		err := storage.SaveTransactionToDB(session.Answers)
+		if err != nil {
+			// Inform the user if saving failed
+			errMsg := tgbotapi.NewMessage(chatID, "Sorry, there was an error saving your transaction. Please try again later.")
+			_, sendErr := b.api.Send(errMsg)
+			if sendErr != nil {
+				log.Printf("Error sending save error message: %v", sendErr)
+			}
+			// Also return the original save error
+			return fmt.Errorf("failed to save transaction to DB: %w", err)
+		}
+	} else {
+		// Save the responses to file
+		storage.SaveResponseToFile(session.Answers)
+	}
 
+	// Send a thank-you message and confirmation
 	msg := tgbotapi.NewMessage(chatID,
 		fmt.Sprintf("Thank you for your responses!\n\nHere are your answers:\nName: %s\nAmount: %f\nCurrency: %s\nDate: %s\nIs Claimable: %t\nPaid for Family: %t",
 			session.Answers.Name, session.Answers.Amount, session.Answers.Currency, session.Answers.Date, session.Answers.IsClaimable, session.Answers.PaidForFamily))
 
 	_, err := b.api.Send(msg)
 	if err != nil {
+		log.Printf("Error sending confirmation message: %v", err)
 		return err
 	}
 
