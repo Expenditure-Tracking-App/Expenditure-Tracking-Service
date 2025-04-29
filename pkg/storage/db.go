@@ -28,7 +28,7 @@ func InitDB(dbConfig config.DatabaseConfig) error {
 	}
 
 	// Construct the connection string
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
 
 	var err error
