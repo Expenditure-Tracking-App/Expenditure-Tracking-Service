@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	// Import the PostgreSQL driver. The underscore means we only need its side effects (registering the driver).
-	_ "github.com/lib/pq"
 )
 
 // db holds the database connection pool. It's a package-level variable.
