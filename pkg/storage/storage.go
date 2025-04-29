@@ -1,15 +1,12 @@
 package storage
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"main/pkg/transaction"
 	"os"
 )
-
-var db *sql.DB
 
 // SaveFilePath File to save responses
 const SaveFilePath = "responses.txt"
@@ -41,7 +38,7 @@ func SaveResponseToFile(response transaction.Transaction) {
 }
 
 // Replace the old saveResponseToFile function
-func SaveTransactionToDB(response transaction.Transaction) error {
+func SaveTransactionToDB(response transaction.TransactionV2) error {
 	insertSQL := `
         INSERT INTO transactions (name, amount, currency, date, is_claimable, paid_for_family)
         VALUES ($1, $2, $3, $4, $5, $6)

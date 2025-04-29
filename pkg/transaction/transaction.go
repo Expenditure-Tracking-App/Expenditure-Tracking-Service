@@ -16,6 +16,15 @@ type Transaction struct {
 	PaidForFamily bool    `json:"paid_for_family"`
 }
 
+type TransactionV2 struct {
+	Name          string  `db:"name"`
+	Amount        float32 `db:"amount"`
+	Currency      string  `db:"currency"`
+	Date          string  `db:"date"`
+	IsClaimable   bool    `db:"is_claimable"`
+	PaidForFamily bool    `db:"paid_for_family"`
+}
+
 // ValidateAmount checks if the amount is a valid number.
 func ValidateAmount(amountStr string) (float32, error) {
 	f, err := strconv.ParseFloat(amountStr, 32)
