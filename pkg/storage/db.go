@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"main/pkg/config"
 	"os"
 )
 
@@ -13,12 +14,12 @@ var db *sql.DB
 
 // InitDB initializes the database connection pool using environment variables.
 // It should be called once when your application starts.
-func InitDB() error {
-	dbHost := os.Getenv("DB_HOST")
-	dbPort := os.Getenv("DB_PORT")
-	dbUser := os.Getenv("DB_USER")
-	dbPassword := os.Getenv("DB_PASSWORD")
-	dbName := os.Getenv("DB_NAME")
+func InitDB(dbConfig config.DatabaseConfig) error {
+	dbHost := dbConfig.Host
+	dbPort := dbConfig.Port
+	dbUser := dbConfig.User
+	dbPassword := dbConfig.Password
+	dbName := dbConfig.DBName
 	dbSSLMode := os.Getenv("DB_SSLMODE") // Often 'disable' for local, 'require' or 'verify-full' for prod
 
 	// Set default SSL mode if not provided
