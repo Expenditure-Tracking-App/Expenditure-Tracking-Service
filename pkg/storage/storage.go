@@ -46,7 +46,12 @@ func SaveTransactionToDB(response transaction.TransactionV2) error {
         `
 	var insertedID int64
 
-	err := db.QueryRow(
+	db, err := GetDB()
+	if err != nil {
+		return err
+	}
+
+	err = db.QueryRow(
 		insertSQL,
 		response.Name,
 		response.Amount,

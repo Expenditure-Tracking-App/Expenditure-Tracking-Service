@@ -2,13 +2,14 @@ package storage
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 )
 
 // db holds the database connection pool. It's a package-level variable.
-var db = GetDB()
+var db *sql.DB
 
 // InitDB initializes the database connection pool using environment variables.
 // It should be called once when your application starts.
@@ -82,11 +83,11 @@ func createTableIfNotExists() error {
 // GetDB returns the initialized database connection pool.
 // Other functions in this package (or other packages, if exported) can use this
 // to interact with the database.
-func GetDB() *sql.DB {
+func GetDB() (*sql.DB, error) {
 	if db == nil {
-		log.Fatal("Database connection pool is not initialized. Call InitDB first.")
+		return nil, errors.New("Database connection pool is not initialized. Call InitDB first.")
 	}
-	return db
+	return db, nil
 }
 
 // CloseDB closes the database connection pool.
