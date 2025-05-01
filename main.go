@@ -28,11 +28,13 @@ func main() {
 
 	token := cfg.TelegramConfig.Token
 
-	err = storage.InitDB(cfg.Database)
-	if err != nil {
-		log.Panic(err)
+	if storage.UseDBToSave {
+		err = storage.InitDB(cfg.Database)
+		if err != nil {
+			log.Panic(err)
+		}
+		defer storage.CloseDB()
 	}
-	defer storage.CloseDB()
 
 	myBot, err := bot.NewBot(string(token))
 	if err != nil {
