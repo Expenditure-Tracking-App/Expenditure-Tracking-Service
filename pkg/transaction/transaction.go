@@ -48,7 +48,7 @@ func ProcessDate(answer string) string {
 		return time.Now().Format("2006-01-02")
 	}
 
-	t, err := time.Parse("02.01.2006", answer)
+	t, err := time.Parse("02.01.06", answer)
 	if err != nil {
 		return time.Now().Format("2006-01-02")
 	}
