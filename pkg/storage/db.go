@@ -4,13 +4,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	_ "github.com/lib/pq"
 	"log"
 	"main/pkg/config"
-	"os"
 )
 
 // db holds the database connection pool. It's a package-level variable.
 var db *sql.DB
+var UseDBToSave = true
 
 // InitDB initializes the database connection pool using environment variables.
 // It should be called once when your application starts.
@@ -20,12 +21,7 @@ func InitDB(dbConfig config.DatabaseConfig) error {
 	dbUser := dbConfig.User
 	dbPassword := dbConfig.Password
 	dbName := dbConfig.DBName
-	dbSSLMode := os.Getenv("DB_SSLMODE") // Often 'disable' for local, 'require' or 'verify-full' for prod
-
-	// Set default SSL mode if not provided
-	if dbSSLMode == "" {
-		dbSSLMode = "disable"
-	}
+	dbSSLMode := "require"
 
 	// Construct the connection string
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
@@ -43,12 +39,12 @@ func InitDB(dbConfig config.DatabaseConfig) error {
 	err = db.Ping()
 	if err != nil {
 		// Close the pool if ping fails, as it's unusable.
-		err := db.Close()
+		err = db.Close()
+
 		if err != nil {
 			panic(err)
 		}
-		log.Printf("Error connecting to database: %v", err)
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return fmt.Errorf("failed to connect to database: %v", err)
 	}
 
 	log.Println("Successfully connected to the database!")

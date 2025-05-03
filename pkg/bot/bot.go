@@ -11,7 +11,6 @@ import (
 
 // Map to track ongoing sessions (active users)
 var userSessions = make(map[int64]*session.UserSession)
-var useDBToSave = false
 
 // Bot represents the Telegram bot.
 type Bot struct {
@@ -119,7 +118,7 @@ func (b *Bot) handleAnswer(chatID int64, individualSession map[int64]*session.Us
 
 // completeSession finishes the session.
 func (b *Bot) completeSession(chatID int64, session *session.UserSession) error {
-	if useDBToSave {
+	if storage.UseDBToSave {
 		// Save the responses to the database
 		err := storage.SaveTransactionToDB(transaction.TransactionV2(session.Answers))
 		if err != nil {
