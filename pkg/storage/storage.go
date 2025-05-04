@@ -40,8 +40,8 @@ func SaveResponseToFile(response transaction.Transaction) {
 // Replace the old saveResponseToFile function
 func SaveTransactionToDB(response transaction.TransactionV2) error {
 	insertSQL := `
-        INSERT INTO transactions (name, amount, currency, date, is_claimable, paid_for_family)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO transactions (name, amount, currency, date, is_claimable, paid_for_family, category)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id; -- Optional: get the ID of the inserted row
         `
 	var insertedID int64
@@ -59,6 +59,7 @@ func SaveTransactionToDB(response transaction.TransactionV2) error {
 		response.Date, // Pass the time.Time object directly
 		response.IsClaimable,
 		response.PaidForFamily,
+		response.Category,
 	).Scan(&insertedID) // Scan the returned ID
 
 	if err != nil {

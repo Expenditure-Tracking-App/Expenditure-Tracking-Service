@@ -79,6 +79,15 @@ func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.U
 
 	msg := tgbotapi.NewMessage(chatID, question)
 
+	if userSession.CurrentQuestion == session.QuestionName {
+		var quickInputButtons []tgbotapi.InlineKeyboardButton
+		for _, input := range session.QuickInput {
+			quickInputButtons = append(quickInputButtons, tgbotapi.NewInlineKeyboardButtonData(input, input))
+		}
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(quickInputButtons...))
+		msg.ReplyMarkup = keyboard
+	}
+
 	if userSession.CurrentQuestion == session.QuestionIsClaimable || userSession.CurrentQuestion == session.QuestionPaidForFamily {
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
@@ -95,6 +104,15 @@ func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.U
 			currencyButtons = append(currencyButtons, tgbotapi.NewInlineKeyboardButtonData(currency, currency))
 		}
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(currencyButtons...))
+		msg.ReplyMarkup = keyboard
+	}
+
+	if userSession.CurrentQuestion == session.QuestionCategory {
+		var categoryButtons []tgbotapi.InlineKeyboardButton
+		for _, category := range session.TransactionCategory {
+			categoryButtons = append(categoryButtons, tgbotapi.NewInlineKeyboardButtonData(category, category))
+		}
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(categoryButtons...))
 		msg.ReplyMarkup = keyboard
 	}
 
@@ -138,8 +156,8 @@ func (b *Bot) completeSession(chatID int64, session *session.UserSession) error 
 
 	// Send a thank-you message and confirmation
 	msg := tgbotapi.NewMessage(chatID,
-		fmt.Sprintf("Thank you for your responses!\n\nHere are your answers:\nName: %s\nAmount: %f\nCurrency: %s\nDate: %s\nIs Claimable: %t\nPaid for Family: %t",
-			session.Answers.Name, session.Answers.Amount, session.Answers.Currency, session.Answers.Date, session.Answers.IsClaimable, session.Answers.PaidForFamily))
+		fmt.Sprintf("Thank you for your responses!\n\nHere are your answers:\nName: %s\nAmount: %f\nCurrency: %s\nDate: %s\nIs Claimable: %t\nPaid for Family: %t\nCategory: %s",
+			session.Answers.Name, session.Answers.Amount, session.Answers.Currency, session.Answers.Date, session.Answers.IsClaimable, session.Answers.PaidForFamily, session.Answers.Category))
 
 	_, err := b.api.Send(msg)
 	if err != nil {
@@ -178,8 +196,12 @@ func (b *Bot) handleCallbackQuery(callbackQuery *tgbotapi.CallbackQuery, userSes
 			userSession.Answers.PaidForFamily = false
 		}
 	default:
-		if userSession.CurrentQuestion == session.QuestionCurrency {
+		if userSession.CurrentQuestion == session.QuestionName {
+			userSession.Answers.Name = callbackQuery.Data
+		} else if userSession.CurrentQuestion == session.QuestionCurrency {
 			userSession.Answers.Currency = callbackQuery.Data
+		} else if userSession.CurrentQuestion == session.QuestionCategory {
+			userSession.Answers.Category = callbackQuery.Data
 		}
 	}
 
