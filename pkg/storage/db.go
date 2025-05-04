@@ -65,6 +65,7 @@ func createTableIfNotExists() error {
 		date DATE,
 		is_claimable BOOLEAN,
 		paid_for_family BOOLEAN,
+	    category TEXT,
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 	);`
 

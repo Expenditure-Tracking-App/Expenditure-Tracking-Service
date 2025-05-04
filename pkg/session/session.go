@@ -19,6 +19,7 @@ const (
 	QuestionDate
 	QuestionIsClaimable
 	QuestionPaidForFamily
+	QuestionCategory
 	QuestionCount // Should be last
 )
 
@@ -30,10 +31,14 @@ var Questions = []string{
 	"What is the date of transaction?",
 	"Is it claimable?",
 	"Is it payable for the family?",
+	"What is the category of transaction?",
 }
 
 // Currencies array
-var Currencies = []string{"USD", "EUR", "JPY", "SGD", "MYR"}
+var Currencies = []string{"USD", "CNY", "JPY", "SGD", "MYR"}
+
+var QuickInput = []string{"Daily transport expenses"}
+var TransactionCategory = []string{"Transport", "Food", "Fitness and Entertainment", "Travel", "Other"}
 
 // NewUserSession creates a new user session.
 func NewUserSession() *UserSession {
@@ -72,6 +77,8 @@ func (s *UserSession) HandleAnswer(answer string) error {
 		if err != nil {
 			return fmt.Errorf("invalid paid for family value: %w", err)
 		}
+	case QuestionCategory:
+		s.Answers.Category = answer
 	default:
 		return fmt.Errorf("invalid question number: %d", s.CurrentQuestion)
 	}

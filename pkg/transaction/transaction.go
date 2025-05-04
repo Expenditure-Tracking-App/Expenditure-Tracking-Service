@@ -14,6 +14,7 @@ type Transaction struct {
 	Date          string  `json:"date"`
 	IsClaimable   bool    `json:"is_claimable"`
 	PaidForFamily bool    `json:"paid_for_family"`
+	Category      string  `json:"category"`
 }
 
 type TransactionV2 struct {
@@ -23,6 +24,7 @@ type TransactionV2 struct {
 	Date          string  `db:"date"`
 	IsClaimable   bool    `db:"is_claimable"`
 	PaidForFamily bool    `db:"paid_for_family"`
+	Category      string  `db:"category"`
 }
 
 // ValidateAmount checks if the amount is a valid number.
