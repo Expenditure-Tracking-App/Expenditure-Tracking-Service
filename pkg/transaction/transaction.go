@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const inputDateFormat = "02.01.06"
+
 // Transaction represents a user's transaction data.
 type Transaction struct {
 	Name          string  `json:"name"`
@@ -25,6 +27,18 @@ type TransactionV2 struct {
 	IsClaimable   bool    `db:"is_claimable"`
 	PaidForFamily bool    `db:"paid_for_family"`
 	Category      string  `db:"category"`
+}
+
+type TransactionV3 struct {
+	ID            int64     `db:"id"`
+	Name          string    `db:"name"`
+	Amount        float32   `db:"amount"`
+	Currency      string    `db:"currency"`
+	Date          string    `db:"date"`
+	IsClaimable   bool      `db:"is_claimable"`
+	PaidForFamily bool      `db:"paid_for_family"`
+	Category      string    `db:"category"`
+	CreatedAt     time.Time `db:"created_at"`
 }
 
 // ValidateAmount checks if the amount is a valid number.
@@ -50,7 +64,7 @@ func ProcessDate(answer string) string {
 		return time.Now().Format("2006-01-02")
 	}
 
-	t, err := time.Parse("02.01.06", answer)
+	t, err := time.Parse(inputDateFormat, answer)
 	if err != nil {
 		return time.Now().Format("2006-01-02")
 	}
