@@ -88,19 +88,19 @@ func GetAllTransactionsFromDB(categoryFilter string, isClaimableFilter *bool, pa
 	if categoryFilter != "" {
 		conditions = append(conditions, fmt.Sprintf("category = $%d", argID))
 		args = append(args, categoryFilter)
-		argID += 1
+		argID = argID + 1
 	}
 
 	if isClaimableFilter != nil {
 		conditions = append(conditions, fmt.Sprintf("is_claimable = $%d", argID))
 		args = append(args, *isClaimableFilter)
-		argID += 1
+		argID = argID + 1
 	}
 
 	if paidForFamilyFilter != nil {
 		conditions = append(conditions, fmt.Sprintf("paid_for_family = $%d", argID))
 		args = append(args, *paidForFamilyFilter)
-		argID += 1
+		argID = argID + 1
 	}
 
 	finalSQL := baseSelectSQL
