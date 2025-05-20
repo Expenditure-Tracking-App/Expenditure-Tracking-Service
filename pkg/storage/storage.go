@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -87,19 +88,19 @@ func GetAllTransactionsFromDB(categoryFilter string, isClaimableFilter *bool, pa
 	if categoryFilter != "" {
 		conditions = append(conditions, fmt.Sprintf("category = $%d", argID))
 		args = append(args, categoryFilter)
-		argID++
+		argID += 1
 	}
 
 	if isClaimableFilter != nil {
 		conditions = append(conditions, fmt.Sprintf("is_claimable = $%d", argID))
 		args = append(args, *isClaimableFilter)
-		argID++
+		argID += 1
 	}
 
 	if paidForFamilyFilter != nil {
 		conditions = append(conditions, fmt.Sprintf("paid_for_family = $%d", argID))
 		args = append(args, *paidForFamilyFilter)
-		argID++
+		argID += 1
 	}
 
 	finalSQL := baseSelectSQL
@@ -121,7 +122,13 @@ func GetAllTransactionsFromDB(categoryFilter string, isClaimableFilter *bool, pa
 		log.Printf("Error querying transactions from database with filters: %v (SQL: %s, Args: %v)", err, finalSQL, args)
 		return nil, fmt.Errorf("database query failed: %w", err)
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Printf("Error closing DB: %v", err)
+			panic(err)
+		}
+	}(rows)
 
 	for rows.Next() {
 		var t transaction.TransactionV3
