@@ -125,7 +125,6 @@ func GetAllTransactionsFromDB(categoryFilter string, isClaimableFilter *bool, pa
 		err := rows.Close()
 		if err != nil {
 			log.Printf("Error closing DB: %v", err)
-			panic(err)
 		}
 	}(rows)
 
