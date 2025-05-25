@@ -26,8 +26,6 @@ func main() {
 		log.Fatalf("Error unmarshalling YAML: %v", err)
 	}
 
-	token := cfg.TelegramConfig.Token
-
 	if storage.UseDBToSave {
 		err = storage.InitDB(cfg.Database)
 		if err != nil {
@@ -36,7 +34,7 @@ func main() {
 		defer storage.CloseDB()
 	}
 
-	myBot, err := bot.NewBot(token)
+	myBot, err := bot.NewBot(cfg.TelegramConfig.Token)
 	if err != nil {
 		log.Panic(err)
 	}
