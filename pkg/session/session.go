@@ -8,7 +8,7 @@ import (
 // UserSession represents a user's Q&A session.
 type UserSession struct {
 	CurrentQuestion int
-	Answers         transaction.Transaction
+	Answers         transaction.Transaction // Assuming this struct has Name, Amount, Category etc.
 }
 
 // Question constants
@@ -20,7 +20,22 @@ const (
 	QuestionIsClaimable
 	QuestionPaidForFamily
 	QuestionCategory
-	QuestionCount // Should be last
+	QuestionCount // Should be last; represents the total number of questions
+
+	DinnerForTheFamily      = "Dinner for the family"
+	DailyTransportExpenses  = "Daily transport expenses"
+	GroceriesFromPandamart  = "Groceries from Pandamart"
+	MonthlyGymMembership    = "Monthly gym membership"
+	GOMOMobilePlan          = "GOMO mobile plan"
+	AppleICloudSubscription = "Apple iCloud subscription"
+
+	TransportCategory        = "Transport"
+	FoodCategory             = "Food"
+	EntertainmentCategory    = "Fitness and Entertainment"
+	TravelCategory           = "Travel"
+	HealthAndFitnessCategory = "Health and Fitness"
+	EducationCategory        = "Education"
+	OtherCategory            = "Other"
 )
 
 // Questions array for the process
@@ -28,22 +43,26 @@ var Questions = []string{
 	"What is the name of the transaction?",
 	"How much is the transaction?",
 	"What currency is the transaction in?",
-	"What is the date of transaction?",
-	"Is it claimable?",
-	"Is it payable for the family?",
+	"What is the date of transaction? (i.e., DD.MM.YY)", // Added format hint
+	"Is it claimable? (yes/no)",                         // Added format hint
+	"Is it paid for the family? (yes/no)",               // Added format hint
 	"What is the category of transaction?",
 }
 
-// Currencies array
+// Currencies array - available for suggestions or validation
 var Currencies = []string{"USD", "CNY", "JPY", "SGD", "MYR"}
 
-var QuickInput = []string{"Daily transport expenses", "Dinner for the family"}
-var TransactionCategory = []string{"Transport", "Food", "Fitness and Entertainment", "Travel", "Other"}
+// QuickInput array - for quick suggestions for the transaction name
+var QuickInput = []string{DailyTransportExpenses, DinnerForTheFamily, GroceriesFromPandamart, MonthlyGymMembership, GOMOMobilePlan, AppleICloudSubscription}
+
+// TransactionCategory array - available for suggestions or validation
+var TransactionCategory = []string{TransportCategory, FoodCategory, EntertainmentCategory, TravelCategory, HealthAndFitnessCategory, EducationCategory, OtherCategory}
 
 // NewUserSession creates a new user session.
 func NewUserSession() *UserSession {
 	return &UserSession{
 		CurrentQuestion: QuestionName,
+		// Answers field is implicitly initialized to its zero value
 	}
 }
 
@@ -52,37 +71,75 @@ func (s *UserSession) IsSessionComplete() bool {
 	return s.CurrentQuestion >= QuestionCount
 }
 
-// HandleAnswer processes the user's answer and updates the session.
+// HandleAnswer processes the user's answer, updates the session,
+// applies auto-fill logic, and skips already answered questions.
 func (s *UserSession) HandleAnswer(answer string) error {
 	var err error
+
 	switch s.CurrentQuestion {
 	case QuestionName:
 		s.Answers.Name = answer
 	case QuestionAmount:
 		s.Answers.Amount, err = transaction.ValidateAmount(answer)
 		if err != nil {
-			return fmt.Errorf("invalid amount: %w", err)
+			// Return a user-friendly error message
+			return fmt.Errorf("invalid amount: %w. Please enter a valid number", err)
 		}
 	case QuestionCurrency:
+		// TODO: Consider adding validation for currency (e.g., check if 'answer' is in 'Currencies' list)
 		s.Answers.Currency = answer
 	case QuestionDate:
 		s.Answers.Date = transaction.ProcessDate(answer)
 	case QuestionIsClaimable:
 		s.Answers.IsClaimable, err = transaction.ValidateBool(answer)
 		if err != nil {
-			return fmt.Errorf("invalid claimable value: %w", err)
+			return fmt.Errorf("invalid input for 'claimable': %w. Please answer 'yes' or 'no'", err)
 		}
 	case QuestionPaidForFamily:
 		s.Answers.PaidForFamily, err = transaction.ValidateBool(answer)
 		if err != nil {
-			return fmt.Errorf("invalid paid for family value: %w", err)
+			return fmt.Errorf("invalid input for 'paid for family': %w. Please answer 'yes' or 'no'", err)
 		}
 	case QuestionCategory:
+		// TODO: Consider adding validation for category (e.g., check if 'answer' is in 'TransactionCategory' list)
 		s.Answers.Category = answer
 	default:
+		// This state should ideally not be reached if IsSessionComplete is checked before calling HandleAnswer.
 		return fmt.Errorf("invalid question number: %d", s.CurrentQuestion)
 	}
 
+	// If an error occurred during the specific answer processing (e.g., validation failed),
+	// return the error. s.CurrentQuestion is NOT advanced, so the same question will be asked again.
+	if err != nil {
+		return err
+	}
+
+	// Advance to what would normally be the next question index.
 	s.CurrentQuestion++
+
 	return nil
+}
+
+func DefaultCategory(transactionName string) string {
+	switch transactionName {
+	case DailyTransportExpenses:
+		return TransportCategory
+	case DinnerForTheFamily, GroceriesFromPandamart:
+		return FoodCategory
+	case MonthlyGymMembership:
+		return HealthAndFitnessCategory
+	case GOMOMobilePlan, AppleICloudSubscription:
+		return EntertainmentCategory
+	default:
+		return ""
+	}
+}
+
+func DefaultPaidForFamily(transactionName string) bool {
+	switch transactionName {
+	case DinnerForTheFamily:
+		return true
+	default:
+		return false
+	}
 }
