@@ -205,6 +205,16 @@ func (b *Bot) handleCallbackQuery(callbackQuery *tgbotapi.CallbackQuery, userSes
 		}
 	}
 
+	if userSession.CurrentQuestion == session.QuestionIsClaimable && session.DefaultPaidForFamily(userSession.Answers.Name) {
+		userSession.Answers.PaidForFamily = session.DefaultPaidForFamily(userSession.Answers.Name)
+		userSession.CurrentQuestion++
+	}
+
+	if userSession.CurrentQuestion == session.QuestionPaidForFamily && len(session.DefaultCategory(userSession.Answers.Name)) > 0 {
+		userSession.Answers.Category = session.DefaultCategory(userSession.Answers.Name)
+		userSession.CurrentQuestion++
+	}
+
 	userSession.CurrentQuestion++
 
 	if userSession.IsSessionComplete() {
