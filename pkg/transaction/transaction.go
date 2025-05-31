@@ -19,6 +19,7 @@ type Transaction struct {
 	Category      string  `json:"category"`
 }
 
+// TODO: Deprecate all versions and combine to a single one
 type TransactionV2 struct {
 	Name          string  `db:"name"`
 	Amount        float32 `db:"amount"`
@@ -29,6 +30,7 @@ type TransactionV2 struct {
 	Category      string  `db:"category"`
 }
 
+// TODO: Deprecate all versions and combine to a single one
 type TransactionV3 struct {
 	ID            int64     `db:"id"`
 	Name          string    `db:"name"`
