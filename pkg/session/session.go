@@ -31,7 +31,7 @@ const (
 
 	TransportCategory        = "Transport"
 	FoodCategory             = "Food"
-	EntertainmentCategory    = "Fitness and Entertainment"
+	EntertainmentCategory    = "Entertainment"
 	TravelCategory           = "Travel"
 	HealthAndFitnessCategory = "Health and Fitness"
 	EducationCategory        = "Education"
