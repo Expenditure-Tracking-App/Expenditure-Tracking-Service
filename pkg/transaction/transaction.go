@@ -10,37 +10,15 @@ const inputDateFormat = "02.01.06"
 
 // Transaction represents a user's transaction data.
 type Transaction struct {
-	Name          string  `json:"name"`
-	Amount        float32 `json:"amount"`
-	Currency      string  `json:"currency"`
-	Date          string  `json:"date"`
-	IsClaimable   bool    `json:"is_claimable"`
-	PaidForFamily bool    `json:"paid_for_family"`
-	Category      string  `json:"category"`
-}
-
-// TODO: Deprecate all versions and combine to a single one
-type TransactionV2 struct {
-	Name          string  `db:"name"`
-	Amount        float32 `db:"amount"`
-	Currency      string  `db:"currency"`
-	Date          string  `db:"date"`
-	IsClaimable   bool    `db:"is_claimable"`
-	PaidForFamily bool    `db:"paid_for_family"`
-	Category      string  `db:"category"`
-}
-
-// TODO: Deprecate all versions and combine to a single one
-type TransactionV3 struct {
-	ID            int64     `db:"id"`
-	Name          string    `db:"name"`
-	Amount        float32   `db:"amount"`
-	Currency      string    `db:"currency"`
-	Date          string    `db:"date"`
-	IsClaimable   bool      `db:"is_claimable"`
-	PaidForFamily bool      `db:"paid_for_family"`
-	Category      string    `db:"category"`
-	CreatedAt     time.Time `db:"created_at"`
+	ID            int64     `db:"id" json:"id"`
+	Name          string    `db:"name" json:"name"`
+	Amount        float32   `db:"amount" json:"amount"`
+	Currency      string    `db:"currency" json:"currency"`
+	Date          string    `db:"date" json:"date"`
+	IsClaimable   bool      `db:"is_claimable" json:"isClaimable"`
+	PaidForFamily bool      `db:"paid_for_family" json:"paidForFamily"`
+	Category      string    `db:"category" json:"category"`
+	CreatedAt     time.Time `db:"created_at" json:"createdAt"`
 }
 
 // ValidateAmount checks if the amount is a valid number.

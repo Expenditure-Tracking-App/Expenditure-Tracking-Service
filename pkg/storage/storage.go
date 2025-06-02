@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"main/pkg/transaction" // Assuming TransactionV3 is here
+	"main/pkg/transaction" // Assuming Transaction is here
 	"os"
 	"strings" // Needed for joining WHERE clauses
 )
@@ -40,7 +40,7 @@ func SaveResponseToFile(response transaction.Transaction) { // Assuming Transact
 }
 
 // SaveTransactionToDB saves the transaction to the database.
-func SaveTransactionToDB(response transaction.TransactionV2) error {
+func SaveTransactionToDB(response transaction.Transaction) error {
 	insertSQL := `
         INSERT INTO transactions (name, amount, currency, date, is_claimable, paid_for_family, category)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -76,7 +76,7 @@ func SaveTransactionToDB(response transaction.TransactionV2) error {
 
 // GetAllTransactionsFromDB retrieves transactions from the database,
 // with optional filtering by category, is_claimable, and paid_for_family.
-func GetAllTransactionsFromDB(categoryFilter string, isClaimableFilter *bool, paidForFamilyFilter *bool) ([]transaction.TransactionV3, error) {
+func GetAllTransactionsFromDB(categoryFilter string, isClaimableFilter *bool, paidForFamilyFilter *bool) ([]transaction.Transaction, error) {
 	baseSelectSQL := `
         SELECT id, name, amount, currency, date, is_claimable, paid_for_family, category, created_at
         FROM transactions
@@ -108,7 +108,7 @@ func GetAllTransactionsFromDB(categoryFilter string, isClaimableFilter *bool, pa
 	}
 	finalSQL += " ORDER BY date DESC, created_at DESC;" // Keep existing order
 
-	var transactions []transaction.TransactionV3
+	var transactions []transaction.Transaction
 
 	currentDB, err := GetDB()
 	if err != nil {
@@ -129,7 +129,7 @@ func GetAllTransactionsFromDB(categoryFilter string, isClaimableFilter *bool, pa
 	}(rows)
 
 	for rows.Next() {
-		var t transaction.TransactionV3
+		var t transaction.Transaction
 		err := rows.Scan(
 			&t.ID,
 			&t.Name,
