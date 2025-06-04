@@ -22,12 +22,13 @@ const (
 	QuestionCategory
 	QuestionCount // Should be last; represents the total number of questions
 
-	DinnerForTheFamily      = "Dinner for the family"
-	DailyTransportExpenses  = "Daily transport expenses"
-	GroceriesFromPandamart  = "Groceries from Pandamart"
-	MonthlyGymMembership    = "Monthly gym membership"
-	GOMOMobilePlan          = "GOMO mobile plan"
-	AppleICloudSubscription = "Apple iCloud subscription"
+	DinnerForTheFamily         = "Dinner for the family"
+	DailyTransportExpenses     = "Daily transport expenses"
+	GroceriesFromPandamart     = "Groceries from Pandamart"
+	MonthlyGymMembership       = "Monthly gym membership"
+	GOMOMobilePlan             = "GOMO mobile plan"
+	SpotifyMonthlySubscription = "Spotify monthly subscription"
+	AppleICloudSubscription    = "Apple iCloud subscription"
 
 	TransportCategory        = "Transport"
 	FoodCategory             = "Food"
@@ -53,7 +54,7 @@ var Questions = []string{
 var Currencies = []string{"USD", "CNY", "JPY", "SGD", "MYR"}
 
 // QuickInput array - for quick suggestions for the transaction name
-var QuickInput = []string{DailyTransportExpenses, DinnerForTheFamily, GroceriesFromPandamart, MonthlyGymMembership, GOMOMobilePlan, AppleICloudSubscription}
+var QuickInput = []string{DailyTransportExpenses, DinnerForTheFamily, GroceriesFromPandamart, MonthlyGymMembership, GOMOMobilePlan, AppleICloudSubscription, SpotifyMonthlySubscription}
 
 // TransactionCategory array - available for suggestions or validation
 var TransactionCategory = []string{TransportCategory, FoodCategory, EntertainmentCategory, TravelCategory, HealthAndFitnessCategory, EducationCategory, OtherCategory}
@@ -128,7 +129,7 @@ func DefaultCategory(transactionName string) string {
 		return FoodCategory
 	case MonthlyGymMembership:
 		return HealthAndFitnessCategory
-	case GOMOMobilePlan, AppleICloudSubscription:
+	case GOMOMobilePlan, AppleICloudSubscription, SpotifyMonthlySubscription:
 		return EntertainmentCategory
 	default:
 		return ""
