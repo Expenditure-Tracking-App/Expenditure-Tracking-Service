@@ -6,7 +6,6 @@ import (
 	"log"
 	"main/pkg/session"
 	"main/pkg/storage"
-	"main/pkg/transaction"
 )
 
 // Map to track ongoing sessions (active users)
