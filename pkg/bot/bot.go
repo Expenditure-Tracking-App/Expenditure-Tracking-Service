@@ -6,7 +6,6 @@ import (
 	"log"
 	"main/pkg/session"
 	"main/pkg/storage"
-	"main/pkg/transaction"
 )
 
 // Map to track ongoing sessions (active users)
@@ -138,7 +137,7 @@ func (b *Bot) handleAnswer(chatID int64, individualSession map[int64]*session.Us
 func (b *Bot) completeSession(chatID int64, session *session.UserSession) error {
 	if storage.UseDBToSave {
 		// Save the responses to the database
-		err := storage.SaveTransactionToDB(transaction.TransactionV2(session.Answers))
+		err := storage.SaveTransactionToDB(session.Answers)
 		if err != nil {
 			// Inform the user if saving failed
 			errMsg := tgbotapi.NewMessage(chatID, "Sorry, there was an error saving your transaction. Please try again later.")
