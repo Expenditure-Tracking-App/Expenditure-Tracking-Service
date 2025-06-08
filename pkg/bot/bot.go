@@ -63,6 +63,7 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 	case addOption:
 		log.Printf("Chat %d: Received %d command", chatID, addOption)
 		return b.startSession(chatID, userSessions)
+    
 	case transactionsSummaryOption: // It's good practice to have a cancel command
 		log.Printf("Chat %d: Received %d command", chatID, transactionsSummaryOption)
 
