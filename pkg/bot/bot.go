@@ -61,11 +61,11 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 
 	switch message.Text {
 	case addOption:
-		log.Printf("Chat %d: Received %d command", chatID, addOption)
+		log.Printf("Chat %v: Received %v command", chatID, addOption)
 		return b.startSession(chatID, userSessions)
     
 	case transactionsSummaryOption: // It's good practice to have a cancel command
-		log.Printf("Chat %d: Received %d command", chatID, transactionsSummaryOption)
+		log.Printf("Chat %v: Received %v command", chatID, transactionsSummaryOption)
 
 		categoryCounts, err := storage.GetTransactionCountByCategory()
 		if err != nil {
