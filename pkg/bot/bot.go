@@ -59,44 +59,30 @@ func (b *Bot) StartListening(userSessions map[int64]*session.UserSession) {
 func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int64]*session.UserSession) error {
 	chatID := message.Chat.ID
 
-	/*if message.Text == addOption {
-		return b.startSession(chatID, userSessions)
-	}
-
-	if _, exists := userSessions[chatID]; exists {
-		return b.handleAnswer(chatID, userSessions, message.Text)
-	}
-
-	messageText := fmt.Sprintf("Send %v to begin!", addOption)
-	msg := tgbotapi.NewMessage(chatID, messageText)
-	_, err := b.api.Send(msg)
-	return err*/
-
 	switch message.Text {
 	case addOption:
 		log.Printf("Chat %v: Received %v command", chatID, addOption)
 		return b.startSession(chatID, userSessions)
-	/*case "help": // New command
-	log.Printf("Chat %d: Received /help command", chatID)
-	helpText := "Welcome to the Expenditure Tracking Bot!\n\n" +
-		"Available commands:\n" +
-		"/add - Start adding a new transaction.\n" +
-		"/cancel - Cancel the current operation (if any).\n" +
-		"/help - Show this help message."
-	msg := tgbotapi.NewMessage(chatID, helpText)
-	_, err := b.api.Send(msg)
-	return err*/
+    
 	case transactionsSummaryOption: // It's good practice to have a cancel command
 		log.Printf("Chat %v: Received %v command", chatID, transactionsSummaryOption)
+
 		categoryCounts, err := storage.GetTransactionCountByCategory()
 		if err != nil {
 			log.Printf("Chat %d: Error getting transaction summary: %v", chatID, err)
 			// Send a generic error message to the user
+
 			errMsg := tgbotapi.NewMessage(chatID, "Sorry, I couldn't retrieve the transaction summary at this time. Please try again later.")
 			_, sendErr := b.api.Send(errMsg)
 			if sendErr != nil {
 				log.Printf("Chat %d: Error sending summary error message: %v", chatID, sendErr)
 			}
+
+			err = b.sendDefaultMessage(chatID)
+			if err != nil {
+				log.Printf("Chat %d: Error sending summary error message: %v", chatID, sendErr)
+			}
+
 			return err // Return the original error
 		}
 		var summaryMessageBuilder strings.Builder
