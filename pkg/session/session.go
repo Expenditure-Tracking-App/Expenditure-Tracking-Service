@@ -37,6 +37,12 @@ const (
 	HealthAndFitnessCategory = "Health and Fitness"
 	EducationCategory        = "Education"
 	OtherCategory            = "Other"
+
+	SGDCurrency = "SGD"
+	USDCurrency = "USD"
+	JPYCurrency = "JPY"
+	CNYCurrency = "CNY"
+	MYRCurrency = "MYR"
 )
 
 // Questions array for the process
@@ -51,7 +57,7 @@ var Questions = []string{
 }
 
 // Currencies array - available for suggestions or validation
-var Currencies = []string{"USD", "CNY", "JPY", "SGD", "MYR"}
+var Currencies = []string{USDCurrency, CNYCurrency, JPYCurrency, SGDCurrency, MYRCurrency}
 
 // QuickInput array - for quick suggestions for the transaction name
 var QuickInput = []string{DailyTransportExpenses, DinnerForTheFamily, GroceriesFromPandamart, MonthlyGymMembership, GOMOMobilePlan, AppleICloudSubscription, SpotifyMonthlySubscription}
@@ -85,6 +91,11 @@ func (s *UserSession) HandleAnswer(answer string) error {
 		if err != nil {
 			// Return a user-friendly error message
 			return fmt.Errorf("invalid amount: %w. Please enter a valid number", err)
+		}
+
+		if len(DefaultCurrency(s.Answers.Name)) > 0 {
+			s.Answers.Currency = DefaultCurrency(s.Answers.Name)
+			s.CurrentQuestion++
 		}
 	case QuestionCurrency:
 		// TODO: Consider adding validation for currency (e.g., check if 'answer' is in 'Currencies' list)
@@ -142,5 +153,14 @@ func DefaultPaidForFamily(transactionName string) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func DefaultCurrency(transactionName string) string {
+	switch transactionName {
+	case GroceriesFromPandamart, MonthlyGymMembership, GOMOMobilePlan, AppleICloudSubscription:
+		return SGDCurrency
+	default:
+		return ""
 	}
 }
