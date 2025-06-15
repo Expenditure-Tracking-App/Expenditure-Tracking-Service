@@ -100,8 +100,11 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 		}
 
 		summaryMessageBuilder.WriteString("\n\nTotal claimable:")
-		amountByIsClaimable, err := storage.GetTotalAmountByIsClaimable()
-		if len(categoryCounts) == 0 {
+		amountByIsClaimable, errGetIsClaimable := storage.GetTotalAmountByIsClaimable()
+		if errGetIsClaimable != nil {
+			log.Printf("Chat %v: Error getting 'is_claimable' totals: %v", chatID, err)
+		}
+		if len(categoryCounts) == 0 || errGetIsClaimable != nil {
 			summaryMessageBuilder.WriteString("\nNo transactions found.")
 		} else {
 			for category, count := range amountByIsClaimable {
@@ -110,8 +113,11 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 		}
 
 		summaryMessageBuilder.WriteString("\n\nTotal paid for family:")
-		amountByPaidForFamily, err := storage.GetTotalAmountByPaidForFamily()
-		if len(amountByPaidForFamily) == 0 {
+		amountByPaidForFamily, errPaidByFamily := storage.GetTotalAmountByPaidForFamily()
+		if errPaidByFamily != nil {
+			log.Printf("Chat %v: Error getting 'paid_for_family' totals: %v", chatID, err)
+		}
+		if len(amountByPaidForFamily) == 0 || errPaidByFamily != nil {
 			summaryMessageBuilder.WriteString("\nNo transactions found.")
 		} else {
 			for category, count := range amountByPaidForFamily {
