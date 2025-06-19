@@ -63,7 +63,7 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 	case addOption:
 		log.Printf("Chat %v: Received %v command", chatID, addOption)
 		return b.startSession(chatID, userSessions)
-    
+
 	case transactionsSummaryOption: // It's good practice to have a cancel command
 		log.Printf("Chat %v: Received %v command", chatID, transactionsSummaryOption)
 
@@ -93,11 +93,38 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 		} else {
 			totalExpense := float32(0)
 			for category, count := range categoryCounts {
-				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %s: %v", category, count))
+				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %v: %v", category, count))
 				totalExpense += count
 			}
 			summaryMessageBuilder.WriteString(fmt.Sprintf("\n- Total expense: %v", totalExpense))
 		}
+
+		summaryMessageBuilder.WriteString("\n\nTotal claimable:")
+		amountByIsClaimable, errGetIsClaimable := storage.GetTotalAmountByIsClaimable()
+		if errGetIsClaimable != nil {
+			log.Printf("Chat %v: Error getting 'is_claimable' totals: %v", chatID, err)
+		}
+		if len(categoryCounts) == 0 || errGetIsClaimable != nil {
+			summaryMessageBuilder.WriteString("\nNo transactions found.")
+		} else {
+			for category, count := range amountByIsClaimable {
+				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %v: %v", category, count))
+			}
+		}
+
+		summaryMessageBuilder.WriteString("\n\nTotal paid for family:")
+		amountByPaidForFamily, errPaidByFamily := storage.GetTotalAmountByPaidForFamily()
+		if errPaidByFamily != nil {
+			log.Printf("Chat %v: Error getting 'paid_for_family' totals: %v", chatID, err)
+		}
+		if len(amountByPaidForFamily) == 0 || errPaidByFamily != nil {
+			summaryMessageBuilder.WriteString("\nNo transactions found.")
+		} else {
+			for category, count := range amountByPaidForFamily {
+				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %v: %v", category, count))
+			}
+		}
+
 		msg := tgbotapi.NewMessage(chatID, summaryMessageBuilder.String())
 		_, sendErr := b.api.Send(msg)
 		if sendErr != nil {
