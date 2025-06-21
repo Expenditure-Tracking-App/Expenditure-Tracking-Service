@@ -29,6 +29,7 @@ const (
 	GOMOMobilePlan             = "GOMO mobile plan"
 	SpotifyMonthlySubscription = "Spotify monthly subscription"
 	AppleICloudSubscription    = "Apple iCloud subscription"
+	GoogleOneSubscription      = "Google One subscription"
 
 	TransportCategory        = "Transport"
 	FoodCategory             = "Food"
@@ -60,7 +61,7 @@ var Questions = []string{
 var Currencies = []string{USDCurrency, CNYCurrency, JPYCurrency, SGDCurrency, MYRCurrency}
 
 // QuickInput array - for quick suggestions for the transaction name
-var QuickInput = []string{DailyTransportExpenses, DinnerForTheFamily, GroceriesFromPandamart, MonthlyGymMembership, GOMOMobilePlan, AppleICloudSubscription, SpotifyMonthlySubscription}
+var QuickInput = []string{DailyTransportExpenses, DinnerForTheFamily, GroceriesFromPandamart, MonthlyGymMembership, GOMOMobilePlan, AppleICloudSubscription, SpotifyMonthlySubscription, GoogleOneSubscription}
 
 // TransactionCategory array - available for suggestions or validation
 var TransactionCategory = []string{TransportCategory, FoodCategory, EntertainmentCategory, TravelCategory, HealthAndFitnessCategory, EducationCategory, OtherCategory}
@@ -140,7 +141,7 @@ func DefaultCategory(transactionName string) string {
 		return FoodCategory
 	case MonthlyGymMembership:
 		return HealthAndFitnessCategory
-	case GOMOMobilePlan, AppleICloudSubscription, SpotifyMonthlySubscription:
+	case GOMOMobilePlan, AppleICloudSubscription, SpotifyMonthlySubscription, GoogleOneSubscription:
 		return EntertainmentCategory
 	default:
 		return ""
@@ -149,8 +150,10 @@ func DefaultCategory(transactionName string) string {
 
 func DefaultPaidForFamily(transactionName string) bool {
 	switch transactionName {
-	case DinnerForTheFamily:
+	case DinnerForTheFamily, GroceriesFromPandamart:
 		return true
+	case MonthlyGymMembership, GOMOMobilePlan, AppleICloudSubscription, SpotifyMonthlySubscription, GoogleOneSubscription:
+		return false
 	default:
 		return false
 	}
@@ -158,7 +161,7 @@ func DefaultPaidForFamily(transactionName string) bool {
 
 func DefaultCurrency(transactionName string) string {
 	switch transactionName {
-	case GroceriesFromPandamart, MonthlyGymMembership, GOMOMobilePlan, AppleICloudSubscription:
+	case GroceriesFromPandamart, MonthlyGymMembership, GOMOMobilePlan, AppleICloudSubscription, GoogleOneSubscription:
 		return SGDCurrency
 	default:
 		return ""
