@@ -199,10 +199,9 @@ func main() {
 		log.Fatalf("Error unmarshalling YAML: %v", err)
 	}
 
-	// Assuming storage.UseDBToSave is a boolean flag you've set based on config
-	// For this example, let's assume it's true if cfg.Database is configured.
-	// You might have a more explicit flag like cfg.Storage.UseDB
-	if cfg.Database.Host != "" { // A simple check if DB config is present
+	if storage.UseDBToSave {
+		// Initialize Database
+		// Assuming storage.InitDB takes config.DatabaseConfig
 		err = storage.InitDB(cfg.Database)
 		if err != nil {
 			log.Fatalf("Failed to initialize database: %v", err)
