@@ -6,7 +6,6 @@ import (
 	"log"
 	"main/pkg/transaction" // Assuming Transaction is here
 	"os"
-	"strings"
 )
 
 // SaveFilePath File to save responses
