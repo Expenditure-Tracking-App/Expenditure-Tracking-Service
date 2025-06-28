@@ -324,8 +324,9 @@ func (b *Bot) handleCallbackQuery(callbackQuery *tgbotapi.CallbackQuery, userSes
 		}
 	}
 
-	if userSession.CurrentQuestion == session.QuestionIsClaimable && session.DefaultPaidForFamily(userSession.Answers.Name) {
-		userSession.Answers.PaidForFamily = session.DefaultPaidForFamily(userSession.Answers.Name)
+	prePaidForFamilyValue, isPrefilledValue := session.DefaultPaidForFamily(userSession.Answers.Name)
+	if userSession.CurrentQuestion == session.QuestionIsClaimable && isPrefilledValue {
+		userSession.Answers.PaidForFamily = prePaidForFamilyValue
 		userSession.CurrentQuestion++
 	}
 
