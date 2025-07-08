@@ -20,19 +20,19 @@ var userSessions = make(map[int64]*session.UserSession)
 
 // Bot represents the Telegram bot.
 type Bot struct {
-	api     *tgbotapi.BotAPI
-	expense []config.FrequentExpense
+	api                       *tgbotapi.BotAPI
+	preFilledFrequentExpenses []config.FrequentExpense
 }
 
 // NewBot creates a new bot instance.
-func NewBot(token string, preFilledExpense []config.FrequentExpense) (*Bot, error) {
+func NewBot(token string, preFilledExpenses []config.FrequentExpense) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bot API: %w", err)
 	}
 	api.Debug = true
 	log.Printf("Authorized on account %s", api.Self.UserName)
-	return &Bot{api: api, expense: preFilledExpense}, nil
+	return &Bot{api: api, preFilledFrequentExpenses: preFilledExpenses}, nil
 }
 
 // StartListening starts listening for updates.
@@ -97,7 +97,7 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %v: %v", category, count))
 				totalExpense += count
 			}
-			summaryMessageBuilder.WriteString(fmt.Sprintf("\n- Total expense: %v", totalExpense))
+			summaryMessageBuilder.WriteString(fmt.Sprintf("\n- Total preFilledFrequentExpenses: %v", totalExpense))
 		}
 
 		summaryMessageBuilder.WriteString("\n\nTotal claimable:")
@@ -205,16 +205,16 @@ func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.U
 		var keyboardRows [][]tgbotapi.InlineKeyboardButton // Slice of rows
 
 		// Iterate through TransactionCategory, taking two items at a time
-		for i := 0; i < len(b.expense); i += 2 {
+		for i := 0; i < len(b.preFilledFrequentExpenses); i += 2 {
 			// Create the first button for the row
-			button1 := tgbotapi.NewInlineKeyboardButtonData(b.expense[i].Name, b.expense[i].Name)
+			button1 := tgbotapi.NewInlineKeyboardButtonData(b.preFilledFrequentExpenses[i].Name, b.preFilledFrequentExpenses[i].Name)
 
 			var rowButtons []tgbotapi.InlineKeyboardButton
 			rowButtons = append(rowButtons, button1)
 
 			// Check if there's a second item for this row
-			if i+1 < len(b.expense) {
-				button2 := tgbotapi.NewInlineKeyboardButtonData(b.expense[i+1].Name, b.expense[i+1].Name)
+			if i+1 < len(b.preFilledFrequentExpenses) {
+				button2 := tgbotapi.NewInlineKeyboardButtonData(b.preFilledFrequentExpenses[i+1].Name, b.preFilledFrequentExpenses[i+1].Name)
 				rowButtons = append(rowButtons, button2)
 			}
 
@@ -439,7 +439,7 @@ func (b *Bot) handleCallbackQuery(callbackQuery *tgbotapi.CallbackQuery, userSes
 		}
 	}
 
-	preFilledExpense := session.CheckPreFilledExpense(userSession.Answers.Name, b.expense)
+	preFilledExpense := session.CheckPreFilledExpense(userSession.Answers.Name, b.preFilledFrequentExpenses)
 
 	prePaidForFamilyValue, isPrefilledValue := session.DefaultPaidForFamilyV2(userSession.Answers.Name, preFilledExpense)
 	if userSession.CurrentQuestion == session.QuestionIsClaimable && isPrefilledValue {
