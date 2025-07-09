@@ -1,10 +1,10 @@
 package bot
 
 import (
-	"errors"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
+	"main/pkg/config"
 	"main/pkg/session"
 	"main/pkg/storage"
 	"strings"
@@ -20,18 +20,19 @@ var userSessions = make(map[int64]*session.UserSession)
 
 // Bot represents the Telegram bot.
 type Bot struct {
-	api *tgbotapi.BotAPI
+	api                       *tgbotapi.BotAPI
+	preFilledFrequentExpenses []config.FrequentExpense
 }
 
 // NewBot creates a new bot instance.
-func NewBot(token string) (*Bot, error) {
+func NewBot(token string, preFilledExpenses []config.FrequentExpense) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bot API: %w", err)
 	}
 	api.Debug = true
 	log.Printf("Authorized on account %s", api.Self.UserName)
-	return &Bot{api: api}, nil
+	return &Bot{api: api, preFilledFrequentExpenses: preFilledExpenses}, nil
 }
 
 // StartListening starts listening for updates.
@@ -96,7 +97,7 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %v: %v", category, count))
 				totalExpense += count
 			}
-			summaryMessageBuilder.WriteString(fmt.Sprintf("\n- Total expense: %v", totalExpense))
+			summaryMessageBuilder.WriteString(fmt.Sprintf("\n- Total preFilledFrequentExpenses: %v", totalExpense))
 		}
 
 		summaryMessageBuilder.WriteString("\n\nTotal claimable:")
@@ -134,7 +135,7 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 
 	default:
 		if _, exists := userSessions[chatID]; exists {
-			return b.handleAnswer(chatID, userSessions, message.Text)
+			return b.handleAnswer(message, userSessions)
 		}
 
 		return b.sendDefaultMessage(chatID)
@@ -147,27 +148,73 @@ func (b *Bot) startSession(chatID int64, userSessions map[int64]*session.UserSes
 	return b.askCurrentQuestion(chatID, userSessions)
 }
 
-// askCurrentQuestion sends the current question to the user.
+// askCurrentQuestion sends the current question to the user, prepended with a summary of previous answers.
 func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.UserSession) error {
 	userSession := userSessions[chatID]
+
+	var messageBuilder strings.Builder
+
+	// Build a summary of answers provided so far, but not for the very first question.
+	if userSession.CurrentQuestion > session.QuestionName {
+		answers := userSession.Answers
+		var summaryParts []string
+
+		// Check which answers have been provided and add them to the summary.
+		if answers.Name != "" {
+			// Escape user-provided text to prevent them from breaking Markdown formatting.
+			summaryParts = append(summaryParts, fmt.Sprintf("*Name:* %s", tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, answers.Name)))
+		}
+		if answers.Amount > 0 {
+			summaryParts = append(summaryParts, fmt.Sprintf("*Amount:* `%.2f`", answers.Amount))
+		}
+		if answers.Currency != "" {
+			summaryParts = append(summaryParts, fmt.Sprintf("*Currency:* %s", tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, answers.Currency)))
+		}
+		// FIX: Check if a time.Time object is set, and format it.
+		if answers.Date != "" {
+			summaryParts = append(summaryParts, fmt.Sprintf("*Date:* %s", tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, answers.Date)))
+		}
+		// For booleans, we check if the question has been passed in the session flow.
+		if userSession.CurrentQuestion > session.QuestionIsClaimable {
+			summaryParts = append(summaryParts, fmt.Sprintf("*Claimable:* %t", answers.IsClaimable))
+		}
+		if userSession.CurrentQuestion > session.QuestionPaidForFamily {
+			summaryParts = append(summaryParts, fmt.Sprintf("*Paid for Family:* %t", answers.PaidForFamily))
+		}
+		if answers.Category != "" { // Category can be auto-filled
+			summaryParts = append(summaryParts, fmt.Sprintf("*Category:* %s", tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, answers.Category)))
+		}
+
+		if len(summaryParts) > 0 {
+			messageBuilder.WriteString("*Your progress so far:*\n")
+			messageBuilder.WriteString(strings.Join(summaryParts, "\n"))
+			// FIX: Escape the hyphens for the separator line.
+			messageBuilder.WriteString("\n")
+		}
+	}
+
 	question := session.Questions[userSession.CurrentQuestion]
+	messageBuilder.WriteString(question)
 
-	msg := tgbotapi.NewMessage(chatID, question)
+	msg := tgbotapi.NewMessage(chatID, messageBuilder.String())
+	// Set the ParseMode to render the Markdown formatting (bolding, code blocks).
+	msg.ParseMode = tgbotapi.ModeMarkdownV2
 
+	// ... (The rest of your keyboard logic remains the same) ...
 	if userSession.CurrentQuestion == session.QuestionName {
 		var keyboardRows [][]tgbotapi.InlineKeyboardButton // Slice of rows
 
 		// Iterate through TransactionCategory, taking two items at a time
-		for i := 0; i < len(session.QuickInput); i += 2 {
+		for i := 0; i < len(b.preFilledFrequentExpenses); i += 2 {
 			// Create the first button for the row
-			button1 := tgbotapi.NewInlineKeyboardButtonData(session.QuickInput[i], session.QuickInput[i])
+			button1 := tgbotapi.NewInlineKeyboardButtonData(b.preFilledFrequentExpenses[i].Name, b.preFilledFrequentExpenses[i].Name)
 
 			var rowButtons []tgbotapi.InlineKeyboardButton
 			rowButtons = append(rowButtons, button1)
 
 			// Check if there's a second item for this row
-			if i+1 < len(session.QuickInput) {
-				button2 := tgbotapi.NewInlineKeyboardButtonData(session.QuickInput[i+1], session.QuickInput[i+1])
+			if i+1 < len(b.preFilledFrequentExpenses) {
+				button2 := tgbotapi.NewInlineKeyboardButtonData(b.preFilledFrequentExpenses[i+1].Name, b.preFilledFrequentExpenses[i+1].Name)
 				rowButtons = append(rowButtons, button2)
 			}
 
@@ -227,30 +274,73 @@ func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.U
 		}
 	}
 
-	_, err := b.api.Send(msg)
-	return err
-}
-
-// handleAnswer processes the user's answer.
-func (b *Bot) handleAnswer(chatID int64, individualSession map[int64]*session.UserSession, answer string) error {
-	if answer == addOption {
-		return b.startSession(chatID, individualSession)
-	}
-
-	err := individualSession[chatID].HandleAnswer(answer)
+	sentMsg, err := b.api.Send(msg)
 	if err != nil {
-		messageErr := b.sendDefaultMessage(chatID)
-		if messageErr != nil {
-			return errors.New(err.Error() + " " + messageErr.Error())
-		}
 		return err
 	}
 
-	if individualSession[chatID].IsSessionComplete() {
-		return b.completeSession(chatID, individualSession[chatID])
+	userSession.LastQuestionMessageID = sentMsg.MessageID
+
+	return err
+}
+
+// handleAnswer processes the user's text reply, deleting messages to keep the chat clean.
+func (b *Bot) handleAnswer(message *tgbotapi.Message, userSessions map[int64]*session.UserSession) error {
+	chatID := message.Chat.ID
+	answer := message.Text
+	userReplyMessageID := message.MessageID
+
+	// Always delete the user's incoming message to keep the chat clean.
+	// We use defer to ensure it runs even if there's an error.
+	defer func() {
+		deleteUserMsg := tgbotapi.NewDeleteMessage(chatID, userReplyMessageID)
+		_, _ = b.api.Request(deleteUserMsg)
+	}()
+
+	if answer == addOption {
+		// If the user starts a new session, clean up the old question.
+		if userSession, ok := userSessions[chatID]; ok && userSession.LastQuestionMessageID != 0 {
+			deleteBotQuestion := tgbotapi.NewDeleteMessage(chatID, userSession.LastQuestionMessageID)
+			_, _ = b.api.Request(deleteBotQuestion)
+		}
+		return b.startSession(chatID, userSessions)
 	}
 
-	return b.askCurrentQuestion(chatID, individualSession)
+	userSession := userSessions[chatID]
+
+	// Delegate validation to the session handler
+	err := userSession.HandleAnswer(answer)
+	if err != nil {
+		// --- Handle Invalid Input ---
+		log.Printf("Chat %d: Invalid user input. Error: %v", chatID, err)
+
+		// The bot's original question is NOT deleted, providing context for the user's correction.
+		// We send a new temporary message with the specific error.
+		errorText := fmt.Sprintf("⚠️ %s\nPlease try again.", err.Error())
+		errorMsg := tgbotapi.NewMessage(chatID, errorText)
+		_, _ = b.api.Send(errorMsg) // Send the error and ignore the result for simplicity
+
+		return err // Return original error to be logged
+	}
+
+	// --- Deletion Logic for VALID answers ---
+	// The user's reply is already scheduled for deletion by the defer statement.
+	// Now, delete the bot's previous question message.
+	if userSession.LastQuestionMessageID != 0 {
+		deleteBotQuestion := tgbotapi.NewDeleteMessage(chatID, userSession.LastQuestionMessageID)
+		if _, err := b.api.Request(deleteBotQuestion); err != nil {
+			log.Printf("Could not delete bot question message %d in chat %d: %v", userSession.LastQuestionMessageID, chatID, err)
+		}
+		// Reset it so we don't try to delete it again
+		userSession.LastQuestionMessageID = 0
+	}
+
+	// --- Continue the conversation flow ---
+	if userSession.IsSessionComplete() {
+		return b.completeSession(chatID, userSession)
+	}
+
+	return b.askCurrentQuestion(chatID, userSessions)
 }
 
 // completeSession finishes the session.
@@ -296,11 +386,36 @@ func (b *Bot) completeSession(chatID int64, session *session.UserSession) error 
 // handleCallbackQuery handles callback queries.
 func (b *Bot) handleCallbackQuery(callbackQuery *tgbotapi.CallbackQuery, userSessions map[int64]*session.UserSession) error {
 	chatID := callbackQuery.Message.Chat.ID
+	messageID := callbackQuery.Message.MessageID // Get the ID of the message to delete
+
+	// --- Delete the message with the inline keyboard ---
+	// This gives the user immediate feedback that their action was received.
+	deleteMsgConfig := tgbotapi.NewDeleteMessage(chatID, messageID)
+	if _, err := b.api.Request(deleteMsgConfig); err != nil {
+		// Log the error but don't stop execution.
+		// The message might have already been deleted, or the bot might lack permissions.
+		log.Printf("Could not delete message %d in chat %d: %v", messageID, chatID, err)
+	}
+	// --- End of deletion logic ---
+
 	userSession, exists := userSessions[chatID]
 	if !exists {
+		// It's good practice to answer the callback even on error, to stop the loading animation.
+		cb := tgbotapi.NewCallback(callbackQuery.ID, "Session expired. Please /add again.")
+		_, _ = b.api.Request(cb) // Best-effort request
 		return fmt.Errorf("session not found for chat ID: %d", chatID)
 	}
 
+	// Answer the callback query to remove the "loading" state from the button.
+	// Since we are deleting the message, this is less critical, but still good practice
+	// in case the deletion fails for some reason.
+	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
+	if _, err := b.api.Request(callback); err != nil {
+		log.Printf("Could not answer callback query %s: %v", callbackQuery.ID, err)
+	}
+
+	// The rest of your existing logic for handling the callback data follows.
+	// I've included a refactored version below that is much cleaner.
 	switch callbackQuery.Data {
 	case "yes":
 		if userSession.CurrentQuestion == session.QuestionIsClaimable {
@@ -324,38 +439,35 @@ func (b *Bot) handleCallbackQuery(callbackQuery *tgbotapi.CallbackQuery, userSes
 		}
 	}
 
-	prePaidForFamilyValue, isPrefilledValue := session.DefaultPaidForFamily(userSession.Answers.Name)
+	preFilledExpense := session.CheckPreFilledExpense(userSession.Answers.Name, b.preFilledFrequentExpenses)
+
+	prePaidForFamilyValue, isPrefilledValue := session.DefaultPaidForFamilyV2(userSession.Answers.Name, preFilledExpense)
 	if userSession.CurrentQuestion == session.QuestionIsClaimable && isPrefilledValue {
 		userSession.Answers.PaidForFamily = prePaidForFamilyValue
 		userSession.CurrentQuestion++
 	}
 
-	if userSession.CurrentQuestion == session.QuestionPaidForFamily && len(session.DefaultCategory(userSession.Answers.Name)) > 0 {
-		userSession.Answers.Category = session.DefaultCategory(userSession.Answers.Name)
+	if userSession.CurrentQuestion == session.QuestionPaidForFamily && len(session.DefaultCategoryV2(userSession.Answers.Name, preFilledExpense)) > 0 {
+		userSession.Answers.Category = session.DefaultCategoryV2(userSession.Answers.Name, preFilledExpense)
+		userSession.CurrentQuestion++
+	}
+
+	if userSession.CurrentQuestion == session.QuestionName && len(session.DefaultCurrencyV2(userSession.Answers.Name, preFilledExpense)) > 0 {
+		userSession.Answers.Currency = session.DefaultCurrencyV2(userSession.Answers.Name, preFilledExpense)
+		userSession.CurrentQuestion++
+	}
+
+	if userSession.Answers.Currency == preFilledExpense.Currency {
 		userSession.CurrentQuestion++
 	}
 
 	userSession.CurrentQuestion++
 
 	if userSession.IsSessionComplete() {
-		err := b.completeSession(chatID, userSession)
-		if err != nil {
-			return err
-		}
-		return nil
+		return b.completeSession(chatID, userSession)
 	}
 
-	err := b.askCurrentQuestion(chatID, userSessions)
-	if err != nil {
-		return err
-	}
-
-	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
-	if _, err := b.api.Request(callback); err != nil {
-		return err
-	}
-
-	return nil
+	return b.askCurrentQuestion(chatID, userSessions)
 }
 
 func (b *Bot) sendDefaultMessage(chatID int64) error {
