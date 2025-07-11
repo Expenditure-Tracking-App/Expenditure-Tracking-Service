@@ -4,6 +4,7 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
+	"main/pkg/config"
 	"main/pkg/session"
 	"main/pkg/storage"
 	"strings"
@@ -19,18 +20,19 @@ var userSessions = make(map[int64]*session.UserSession)
 
 // Bot represents the Telegram bot.
 type Bot struct {
-	api *tgbotapi.BotAPI
+	api                       *tgbotapi.BotAPI
+	preFilledFrequentExpenses []config.FrequentExpense
 }
 
 // NewBot creates a new bot instance.
-func NewBot(token string) (*Bot, error) {
+func NewBot(token string, preFilledExpenses []config.FrequentExpense) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bot API: %w", err)
 	}
 	api.Debug = true
 	log.Printf("Authorized on account %s", api.Self.UserName)
-	return &Bot{api: api}, nil
+	return &Bot{api: api, preFilledFrequentExpenses: preFilledExpenses}, nil
 }
 
 // StartListening starts listening for updates.
@@ -95,7 +97,7 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %v: %v", category, count))
 				totalExpense += count
 			}
-			summaryMessageBuilder.WriteString(fmt.Sprintf("\n- Total expense: %v", totalExpense))
+			summaryMessageBuilder.WriteString(fmt.Sprintf("\n- Total preFilledFrequentExpenses: %v", totalExpense))
 		}
 
 		summaryMessageBuilder.WriteString("\n\nTotal claimable:")
@@ -203,16 +205,16 @@ func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.U
 		var keyboardRows [][]tgbotapi.InlineKeyboardButton // Slice of rows
 
 		// Iterate through TransactionCategory, taking two items at a time
-		for i := 0; i < len(session.QuickInput); i += 2 {
+		for i := 0; i < len(b.preFilledFrequentExpenses); i += 2 {
 			// Create the first button for the row
-			button1 := tgbotapi.NewInlineKeyboardButtonData(session.QuickInput[i], session.QuickInput[i])
+			button1 := tgbotapi.NewInlineKeyboardButtonData(b.preFilledFrequentExpenses[i].Name, b.preFilledFrequentExpenses[i].Name)
 
 			var rowButtons []tgbotapi.InlineKeyboardButton
 			rowButtons = append(rowButtons, button1)
 
 			// Check if there's a second item for this row
-			if i+1 < len(session.QuickInput) {
-				button2 := tgbotapi.NewInlineKeyboardButtonData(session.QuickInput[i+1], session.QuickInput[i+1])
+			if i+1 < len(b.preFilledFrequentExpenses) {
+				button2 := tgbotapi.NewInlineKeyboardButtonData(b.preFilledFrequentExpenses[i+1].Name, b.preFilledFrequentExpenses[i+1].Name)
 				rowButtons = append(rowButtons, button2)
 			}
 
@@ -437,14 +439,25 @@ func (b *Bot) handleCallbackQuery(callbackQuery *tgbotapi.CallbackQuery, userSes
 		}
 	}
 
-	prePaidForFamilyValue, isPrefilledValue := session.DefaultPaidForFamily(userSession.Answers.Name)
+	preFilledExpense := session.CheckPreFilledExpense(userSession.Answers.Name, b.preFilledFrequentExpenses)
+
+	prePaidForFamilyValue, isPrefilledValue := session.DefaultPaidForFamilyV2(userSession.Answers.Name, preFilledExpense)
 	if userSession.CurrentQuestion == session.QuestionIsClaimable && isPrefilledValue {
 		userSession.Answers.PaidForFamily = prePaidForFamilyValue
 		userSession.CurrentQuestion++
 	}
 
-	if userSession.CurrentQuestion == session.QuestionPaidForFamily && len(session.DefaultCategory(userSession.Answers.Name)) > 0 {
-		userSession.Answers.Category = session.DefaultCategory(userSession.Answers.Name)
+	if userSession.CurrentQuestion == session.QuestionPaidForFamily && len(session.DefaultCategoryV2(userSession.Answers.Name, preFilledExpense)) > 0 {
+		userSession.Answers.Category = session.DefaultCategoryV2(userSession.Answers.Name, preFilledExpense)
+		userSession.CurrentQuestion++
+	}
+
+	if userSession.CurrentQuestion == session.QuestionName && len(session.DefaultCurrencyV2(userSession.Answers.Name, preFilledExpense)) > 0 {
+		userSession.Answers.Currency = session.DefaultCurrencyV2(userSession.Answers.Name, preFilledExpense)
+		userSession.CurrentQuestion++
+	}
+
+	if userSession.Answers.Currency == preFilledExpense.Currency {
 		userSession.CurrentQuestion++
 	}
 
