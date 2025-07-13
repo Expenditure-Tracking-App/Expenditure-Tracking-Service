@@ -22,17 +22,18 @@ var userSessions = make(map[int64]*session.UserSession)
 type Bot struct {
 	api                       *tgbotapi.BotAPI
 	preFilledFrequentExpenses []config.FrequentExpense
+	categories                []string
 }
 
 // NewBot creates a new bot instance.
-func NewBot(token string, preFilledExpenses []config.FrequentExpense) (*Bot, error) {
+func NewBot(token string, preFilledExpenses []config.FrequentExpense, expenseCategories []string) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bot API: %w", err)
 	}
 	api.Debug = true
 	log.Printf("Authorized on account %s", api.Self.UserName)
-	return &Bot{api: api, preFilledFrequentExpenses: preFilledExpenses}, nil
+	return &Bot{api: api, preFilledFrequentExpenses: preFilledExpenses, categories: expenseCategories}, nil
 }
 
 // StartListening starts listening for updates.
@@ -97,7 +98,7 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %v: %v", category, count))
 				totalExpense += count
 			}
-			summaryMessageBuilder.WriteString(fmt.Sprintf("\n- Total preFilledFrequentExpenses: %v", totalExpense))
+			summaryMessageBuilder.WriteString(fmt.Sprintf("\n- Total Expenses: %v", totalExpense))
 		}
 
 		summaryMessageBuilder.WriteString("\n\nTotal claimable:")
@@ -251,16 +252,16 @@ func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.U
 		var keyboardRows [][]tgbotapi.InlineKeyboardButton // Slice of rows
 
 		// Iterate through TransactionCategory, taking two items at a time
-		for i := 0; i < len(session.TransactionCategory); i += 2 {
+		for i := 0; i < len(b.categories); i += 2 {
 			// Create the first button for the row
-			button1 := tgbotapi.NewInlineKeyboardButtonData(session.TransactionCategory[i], session.TransactionCategory[i])
+			button1 := tgbotapi.NewInlineKeyboardButtonData(b.categories[i], b.categories[i])
 
 			var rowButtons []tgbotapi.InlineKeyboardButton
 			rowButtons = append(rowButtons, button1)
 
 			// Check if there's a second item for this row
-			if i+1 < len(session.TransactionCategory) {
-				button2 := tgbotapi.NewInlineKeyboardButtonData(session.TransactionCategory[i+1], session.TransactionCategory[i+1])
+			if i+1 < len(b.categories) {
+				button2 := tgbotapi.NewInlineKeyboardButtonData(b.categories[i+1], b.categories[i+1])
 				rowButtons = append(rowButtons, button2)
 			}
 
@@ -441,23 +442,18 @@ func (b *Bot) handleCallbackQuery(callbackQuery *tgbotapi.CallbackQuery, userSes
 
 	preFilledExpense := session.CheckPreFilledExpense(userSession.Answers.Name, b.preFilledFrequentExpenses)
 
-	prePaidForFamilyValue, isPrefilledValue := session.DefaultPaidForFamilyV2(userSession.Answers.Name, preFilledExpense)
-	if userSession.CurrentQuestion == session.QuestionIsClaimable && isPrefilledValue {
-		userSession.Answers.PaidForFamily = prePaidForFamilyValue
+	if userSession.CurrentQuestion == session.QuestionIsClaimable && preFilledExpense != nil {
+		userSession.Answers.PaidForFamily = preFilledExpense.PaidForFamily
 		userSession.CurrentQuestion++
 	}
 
-	if userSession.CurrentQuestion == session.QuestionPaidForFamily && len(session.DefaultCategoryV2(userSession.Answers.Name, preFilledExpense)) > 0 {
-		userSession.Answers.Category = session.DefaultCategoryV2(userSession.Answers.Name, preFilledExpense)
+	if userSession.CurrentQuestion == session.QuestionPaidForFamily && preFilledExpense != nil && len(preFilledExpense.Category) > 0 {
+		userSession.Answers.Category = preFilledExpense.Category
 		userSession.CurrentQuestion++
 	}
 
-	if userSession.CurrentQuestion == session.QuestionName && len(session.DefaultCurrencyV2(userSession.Answers.Name, preFilledExpense)) > 0 {
-		userSession.Answers.Currency = session.DefaultCurrencyV2(userSession.Answers.Name, preFilledExpense)
-		userSession.CurrentQuestion++
-	}
-
-	if userSession.Answers.Currency == preFilledExpense.Currency {
+	if userSession.CurrentQuestion == session.QuestionAmount && preFilledExpense != nil && len(preFilledExpense.Currency) > 0 {
+		userSession.Answers.Currency = preFilledExpense.Currency
 		userSession.CurrentQuestion++
 	}
 
