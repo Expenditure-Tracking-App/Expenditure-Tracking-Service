@@ -1,6 +1,5 @@
 package session
 
-// Question constants
 const (
 	QuestionName = iota
 	QuestionAmount
@@ -10,15 +9,6 @@ const (
 	QuestionPaidForFamily
 	QuestionCategory
 	QuestionCount // Should be last; represents the total number of questions
-
-	DinnerForTheFamily         = "Dinner for the family"
-	DailyTransportExpenses     = "Daily transport expenses"
-	GroceriesFromPandamart     = "Groceries from Pandamart"
-	MonthlyGymMembership       = "Monthly gym membership"
-	GOMOMobilePlan             = "GOMO mobile plan"
-	SpotifyMonthlySubscription = "Spotify monthly subscription"
-	AppleICloudSubscription    = "Apple iCloud subscription"
-	GoogleOneSubscription      = "Google One subscription"
 
 	TransportCategory        = "Transport"
 	FoodCategory             = "Food"
@@ -48,9 +38,6 @@ var Questions = []string{
 
 // Currencies array - available for suggestions or validation
 var Currencies = []string{USDCurrency, CNYCurrency, JPYCurrency, SGDCurrency, MYRCurrency}
-
-// QuickInput array - for quick suggestions for the transaction name
-var QuickInput = []string{DailyTransportExpenses, DinnerForTheFamily, GroceriesFromPandamart, MonthlyGymMembership, GOMOMobilePlan, AppleICloudSubscription, SpotifyMonthlySubscription, GoogleOneSubscription}
 
 // TransactionCategory array - available for suggestions or validation
 var TransactionCategory = []string{TransportCategory, FoodCategory, EntertainmentCategory, TravelCategory, HealthAndFitnessCategory, EducationCategory, OtherCategory}
