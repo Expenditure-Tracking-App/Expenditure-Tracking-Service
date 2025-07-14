@@ -22,17 +22,18 @@ var userSessions = make(map[int64]*session.UserSession)
 type Bot struct {
 	api                       *tgbotapi.BotAPI
 	preFilledFrequentExpenses []config.FrequentExpense
+	expenseCategories         []string
 }
 
 // NewBot creates a new bot instance.
-func NewBot(token string, preFilledExpenses []config.FrequentExpense) (*Bot, error) {
+func NewBot(token string, preFilledExpenses []config.FrequentExpense, expenseCategories []string) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bot API: %w", err)
 	}
 	api.Debug = true
 	log.Printf("Authorized on account %s", api.Self.UserName)
-	return &Bot{api: api, preFilledFrequentExpenses: preFilledExpenses}, nil
+	return &Bot{api: api, preFilledFrequentExpenses: preFilledExpenses, expenseCategories: expenseCategories}, nil
 }
 
 // StartListening starts listening for updates.
