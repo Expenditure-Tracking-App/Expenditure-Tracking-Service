@@ -252,16 +252,16 @@ func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.U
 		var keyboardRows [][]tgbotapi.InlineKeyboardButton // Slice of rows
 
 		// Iterate through TransactionCategory, taking two items at a time
-		for i := 0; i < len(session.TransactionCategory); i += 2 {
+		for i := 0; i < len(b.expenseCategories); i += 2 {
 			// Create the first button for the row
-			button1 := tgbotapi.NewInlineKeyboardButtonData(session.TransactionCategory[i], session.TransactionCategory[i])
+			button1 := tgbotapi.NewInlineKeyboardButtonData(b.expenseCategories[i], b.expenseCategories[i])
 
 			var rowButtons []tgbotapi.InlineKeyboardButton
 			rowButtons = append(rowButtons, button1)
 
 			// Check if there's a second item for this row
-			if i+1 < len(session.TransactionCategory) {
-				button2 := tgbotapi.NewInlineKeyboardButtonData(session.TransactionCategory[i+1], session.TransactionCategory[i+1])
+			if i+1 < len(b.expenseCategories) {
+				button2 := tgbotapi.NewInlineKeyboardButtonData(b.expenseCategories[i+1], b.expenseCategories[i+1])
 				rowButtons = append(rowButtons, button2)
 			}
 
