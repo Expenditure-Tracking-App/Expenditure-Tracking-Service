@@ -10,14 +10,6 @@ const (
 	QuestionCategory
 	QuestionCount // Should be last; represents the total number of questions
 
-	TransportCategory        = "Transport"
-	FoodCategory             = "Food"
-	EntertainmentCategory    = "Entertainment"
-	TravelCategory           = "Travel"
-	HealthAndFitnessCategory = "Health and Fitness"
-	EducationCategory        = "Education"
-	OtherCategory            = "Other"
-
 	SGDCurrency = "SGD"
 	USDCurrency = "USD"
 	JPYCurrency = "JPY"
@@ -38,6 +30,3 @@ var Questions = []string{
 
 // Currencies array - available for suggestions or validation
 var Currencies = []string{USDCurrency, CNYCurrency, JPYCurrency, SGDCurrency, MYRCurrency}
-
-// TransactionCategory array - available for suggestions or validation
-var TransactionCategory = []string{TransportCategory, FoodCategory, EntertainmentCategory, TravelCategory, HealthAndFitnessCategory, EducationCategory, OtherCategory}
