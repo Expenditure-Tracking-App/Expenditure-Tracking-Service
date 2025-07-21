@@ -199,7 +199,7 @@ func main() {
 		log.Fatalf("Error unmarshalling YAML: %v", err)
 	}
 
-	if storage.UseDBToSave {
+	if cfg.FeaturesConfig.SaveToDB {
 		// Initialize Database
 		// Assuming storage.InitDB takes config.DatabaseConfig
 		err = storage.InitDB(cfg.Database)
