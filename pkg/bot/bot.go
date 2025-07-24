@@ -23,17 +23,18 @@ type Bot struct {
 	api                       *tgbotapi.BotAPI
 	preFilledFrequentExpenses []config.FrequentExpense
 	categories                []string
+	currencies                []string
 }
 
 // NewBot creates a new bot instance.
-func NewBot(token string, preFilledExpenses []config.FrequentExpense, expenseCategories []string) (*Bot, error) {
+func NewBot(token string, preFilledExpenses []config.FrequentExpense, expenseCategories, supportedCurrencies []string) (*Bot, error) {
 	api, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bot API: %w", err)
 	}
 	api.Debug = true
 	log.Printf("Authorized on account %s", api.Self.UserName)
-	return &Bot{api: api, preFilledFrequentExpenses: preFilledExpenses, categories: expenseCategories}, nil
+	return &Bot{api: api, preFilledFrequentExpenses: preFilledExpenses, categories: expenseCategories, currencies: supportedCurrencies}, nil
 }
 
 // StartListening starts listening for updates.

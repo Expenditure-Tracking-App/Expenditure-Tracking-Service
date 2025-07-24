@@ -33,7 +33,7 @@ func main() {
 		log.Fatalf("Error unmarshalling YAML: %v", err)
 	}
 
-	if storage.UseDBToSave {
+	if cfg.FeaturesConfig.SaveToDB {
 		err = storage.InitDB(cfg.Database)
 		if err != nil {
 			log.Panic(err)
@@ -53,7 +53,7 @@ func main() {
 		fmt.Printf("Predicted label: %s (%.2f%% confidence)\n", label, score*100)
 	}
 
-	myBot, err := bot.NewBot(cfg.TelegramConfig.Token, cfg.FrequentExpenses, cfg.ExpenseCategories)
+	myBot, err := bot.NewBot(cfg.TelegramConfig.Token, cfg.FrequentExpenses, cfg.ExpenseCategories, cfg.SupportedCurrencies)
 	if err != nil {
 		log.Panic(err)
 	}
