@@ -9,12 +9,6 @@ const (
 	QuestionPaidForFamily
 	QuestionCategory
 	QuestionCount // Should be last; represents the total number of questions
-
-	SGDCurrency = "SGD"
-	USDCurrency = "USD"
-	JPYCurrency = "JPY"
-	CNYCurrency = "CNY"
-	MYRCurrency = "MYR"
 )
 
 // Questions array for the process
