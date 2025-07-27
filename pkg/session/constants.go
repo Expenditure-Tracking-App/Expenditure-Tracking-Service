@@ -21,6 +21,3 @@ var Questions = []string{
 	"Is it paid for the family? \\(yes/no\\)",                       // Added format hint
 	"What is the category of transaction?",
 }
-
-// Currencies array - available for suggestions or validation
-var Currencies = []string{USDCurrency, CNYCurrency, JPYCurrency, SGDCurrency, MYRCurrency}
