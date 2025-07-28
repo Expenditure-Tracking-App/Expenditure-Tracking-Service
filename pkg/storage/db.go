@@ -11,7 +11,6 @@ import (
 
 // db holds the database connection pool. It's a package-level variable.
 var db *sql.DB
-var UseDBToSave = true
 
 // InitDB initializes the database connection pool using environment variables.
 // It should be called once when your application starts.
