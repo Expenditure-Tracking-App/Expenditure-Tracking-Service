@@ -11,6 +11,8 @@ Telegram bot to submit your daily expenses and track your monthly expenses.
 - Set pre-filled expense so that you do not need to enter the same expenses often.
 - Select the pre-filled expenses with saved settings such as the expense category.
 
+https://github.com/user-attachments/assets/df75c3f9-4294-48a9-9c7d-980fc670f249
+
 ## Running the program
 
 To run the program
