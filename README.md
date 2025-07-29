@@ -1,5 +1,16 @@
 # Expenditure-Tracking-Bot
 
+Telegram bot to submit your daily expenses and track your monthly expenses.
+
+## Features
+
+### Submit daily expenses
+
+- Submit daily expenses to the bot in a chat style, by entering your expense details such as the name, date, amount and category of the transaction.
+- Set pre-filled expense so that you do not need to enter the same expenses often. 
+
+## Running the program
+
 To run the program
 ```
 go run main
