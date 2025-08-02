@@ -53,7 +53,7 @@ func main() {
 		fmt.Printf("Predicted label: %s (%.2f%% confidence)\n", label, score*100)
 	}
 
-	myBot, err := bot.NewBot(cfg.TelegramConfig.Token, cfg.FrequentExpenses, cfg.ExpenseCategories, cfg.SupportedCurrencies)
+	myBot, err := bot.NewBot(cfg.TelegramConfig.Token, cfg.FeaturesConfig, cfg.FrequentExpenses, cfg.ExpenseCategories, cfg.SupportedCurrencies)
 	if err != nil {
 		log.Panic(err)
 	}
