@@ -11,7 +11,6 @@ import (
 
 // db holds the database connection pool. It's a package-level variable.
 var db *sql.DB
-var UseDBToSave = true
 
 // InitDB initializes the database connection pool using environment variables.
 // It should be called once when your application starts.
@@ -21,7 +20,7 @@ func InitDB(dbConfig config.DatabaseConfig) error {
 	dbUser := dbConfig.User
 	dbPassword := dbConfig.Password
 	dbName := dbConfig.DBName
-	dbSSLMode := "require"
+	dbSSLMode := dbConfig.SSLMode
 
 	// Construct the connection string
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
