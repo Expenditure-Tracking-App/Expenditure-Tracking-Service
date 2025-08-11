@@ -71,3 +71,38 @@ func SaveTransactionToDB(response transaction.Transaction) error {
 	log.Printf("Successfully inserted transaction with ID: %d", insertedID)
 	return nil
 }
+
+// InsertTransaction inserts a new transaction into the database.
+func InsertTransaction(t transaction.Transaction) error {
+	// Note: This is an example. You should have proper validation
+	// and error handling in a real-world application.
+	insertSQL := `
+        INSERT INTO transactions (name, amount, currency, date, is_claimable, paid_for_family, category)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id;
+    `
+	var insertedID int
+
+	currentDB, err := GetDB()
+	if err != nil {
+		return fmt.Errorf("failed to get DB connection: %w", err)
+	}
+
+	err = currentDB.QueryRow(
+		insertSQL,
+		t.Name,
+		t.Amount,
+		t.Currency,
+		t.Date,
+		t.IsClaimable,
+		t.PaidForFamily,
+		t.Category,
+	).Scan(&insertedID)
+
+	if err != nil {
+		return fmt.Errorf("database insert failed: %w", err)
+	}
+
+	log.Printf("Successfully inserted transaction with ID: %d", insertedID)
+	return nil
+}
