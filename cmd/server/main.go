@@ -80,11 +80,6 @@ func exampleHandler(w http.ResponseWriter, r *http.Request) {
 
 // getTransactionsHandler retrieves transactions, allowing filtering and pagination.
 func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	queryParams := r.URL.Query()
 
 	// Filtering parameters
@@ -185,6 +180,41 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 		r.Method, r.URL.Path, len(transactions), page, limit, totalItems, r.RemoteAddr)
 }
 
+// createTransactionHandler handles the creation of a new transaction.
+func createTransactionHandler(w http.ResponseWriter, r *http.Request) {
+	var newTransaction transaction.Transaction
+	if err := json.NewDecoder(r.Body).Decode(&newTransaction); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Insert the new transaction into the database
+	if err := storage.InsertTransaction(newTransaction); err != nil {
+		log.Printf("Error inserting transaction: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	response := MessageResponse{Message: "Transaction created successfully"}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response JSON: %v", err)
+	}
+}
+
+// transactionsHandler routes to different handlers based on the HTTP method.
+func transactionsHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		getTransactionsHandler(w, r)
+	case http.MethodPost:
+		createTransactionHandler(w, r)
+	default:
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 // --- Main Function ---
 
 func main() {
@@ -215,13 +245,15 @@ func main() {
 	// --- Register Handlers ---
 	http.HandleFunc("/health", healthCheckHandler)
 	http.HandleFunc("/api/v1/example", exampleHandler)
-	http.HandleFunc("/api/v1/transactions", getTransactionsHandler)
+	http.HandleFunc("/api/v1/transactions", transactionsHandler)
 
 	// --- Configure and Start Server ---
-	port := "8080"
+	port := "8081"
 	serverAddr := fmt.Sprintf(":%s", port)
 
 	log.Printf("Starting HTTP server on %s", serverAddr)
+
+	log.Printf("The available endpoints:\nHealth check endpoint: localhost:%v/health\nTransactions API endpoint: localhost:%v/api/v1/transactions", port, port)
 
 	err = http.ListenAndServe(serverAddr, nil)
 	if err != nil {
