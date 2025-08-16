@@ -11,8 +11,9 @@ import (
 	"main/pkg/transaction" // Assuming your Transaction struct is here
 	"net/http"             // The core HTTP package
 	"os"                   // To potentially read port from environment
-	"strconv"              // To parse boolean and integer query parameters
-	"time"                 // For example data
+	"regexp"
+	"strconv" // To parse boolean and integer query parameters
+	"time"    // For example data
 )
 
 // Define a struct for example JSON responses
@@ -251,7 +252,11 @@ func main() {
 
 	// --- CORS Middleware ---
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:3000"},
+		AllowedOrigins: []string{"http://localhost:3000", "http://192.168.1.11:3000"},
+		AllowOriginFunc: func(origin string) bool {
+			match, _ := regexp.MatchString(`^https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}):\d+$`, origin)
+			return match
+		},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type", "Authorization"},
 	})
