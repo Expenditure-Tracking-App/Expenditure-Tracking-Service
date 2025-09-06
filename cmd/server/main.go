@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"log"
 	"main/pkg/config"
+	"main/pkg/handler"
 	"main/pkg/storage"     // Assuming your storage functions are here
 	"main/pkg/transaction" // Assuming your Transaction struct is here
 	"net/http"             // The core HTTP package
@@ -17,52 +18,14 @@ import (
 	"time"
 )
 
-// Define a struct for example JSON responses
-type HealthStatus struct {
-	Status    string    `json:"status"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
 type MessageResponse struct {
 	Message string `json:"message"`
-}
-
-// PaginatedTransactionsResponse defines the structure for paginated transaction results.
-type PaginatedTransactionsResponse struct {
-	Transactions []transaction.Transaction `json:"transactions"`
-	CurrentPage  int                       `json:"currentPage"`
-	PageSize     int                       `json:"pageSize"`
-	TotalItems   int                       `json:"totalItems"`
-	TotalPages   int                       `json:"totalPages"`
 }
 
 // --- Global Cache ---
 var c = cache.New(5*time.Minute, 10*time.Minute)
 
 // --- Handler Functions ---
-
-// healthCheckHandler responds with the server's status.
-func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	// Only allow GET requests for this endpoint
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	status := HealthStatus{
-		Status:    "OK",
-		Timestamp: time.Now().UTC(),
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	err := json.NewEncoder(w).Encode(status)
-	if err != nil {
-		log.Printf("Error encoding health status JSON: %v", err)
-	}
-	log.Printf("Served %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
-}
 
 // getPrefilledExpensesHandler creates an HTTP handler that serves the list
 // of pre-filled expenses from the configuration.
@@ -189,7 +152,7 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 		totalPages = (totalItems + limit - 1) / limit // Ceiling division
 	}
 
-	response := PaginatedTransactionsResponse{
+	response := transaction.PaginatedTransactionsResponse{
 		Transactions: transactions,
 		CurrentPage:  page,
 		PageSize:     limit,
@@ -274,7 +237,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", healthCheckHandler)
+	mux.HandleFunc("/health", handler.HealthCheckHandler)
 	mux.HandleFunc("/api/v1/transactions", transactionsHandler)
 
 	prefilledHandler := getPrefilledExpensesHandler(cfg.FrequentExpenses)
@@ -290,7 +253,7 @@ func main() {
 		AllowedHeaders: []string{"Content-Type", "Authorization"},
 	})
 
-	handler := corsMiddleware.Handler(mux)
+	corsMiddlewareHandler := corsMiddleware.Handler(mux)
 
 	port := "8081"
 	serverAddr := fmt.Sprintf(":%s", port)
@@ -300,7 +263,7 @@ func main() {
 	log.Printf("The available endpoints:\nHealth check endpoint: localhost:%v/health\nTransactions API endpoint: localhost:%v/api/v1/transactions",
 		port, port)
 
-	err = http.ListenAndServe(serverAddr, handler)
+	err = http.ListenAndServe(serverAddr, corsMiddlewareHandler)
 	if err != nil {
 		log.Fatalf("HTTP server failed to start: %v", err)
 	}
