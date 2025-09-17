@@ -7,7 +7,7 @@ import (
 // UserSession represents a user's Q&A session.
 type UserSession struct {
 	CurrentQuestion       int
-	Answers               transaction.Transaction // Assuming this struct has Name, Amount, Category etc.
+	Answers               transaction.Transaction // Assuming this struct has Name, Amount, Name etc.
 	LastQuestionMessageID int
 }
 

@@ -100,7 +100,10 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 		totalPages = (totalItems + limit - 1) / limit // Ceiling division
 	}
 
+	categories, err := storage.GetTransactionCountByCategory()
+
 	response := transaction.PaginatedTransactionsResponse{
+		Categories:   categories,
 		Transactions: transactions,
 		CurrentPage:  page,
 		PageSize:     limit,

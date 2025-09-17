@@ -90,15 +90,15 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 			return err // Return the original error
 		}
 		var summaryMessageBuilder strings.Builder
-		summaryMessageBuilder.WriteString("Transaction Summary by Category:")
+		summaryMessageBuilder.WriteString("Transaction Summary by Name:")
 
 		if len(categoryCounts) == 0 {
 			summaryMessageBuilder.WriteString("\nNo transactions found.")
 		} else {
 			totalExpense := float32(0)
-			for category, count := range categoryCounts {
-				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %v: %v", category, count))
-				totalExpense += count
+			for _, category := range categoryCounts {
+				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %v: %v", category.Name, category.TotalAmount))
+				totalExpense += category.TotalAmount
 			}
 			summaryMessageBuilder.WriteString(fmt.Sprintf("\n- Total Expenses: %v", totalExpense))
 		}
@@ -184,8 +184,8 @@ func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.U
 		if userSession.CurrentQuestion > session.QuestionPaidForFamily {
 			summaryParts = append(summaryParts, fmt.Sprintf("*Paid for Family:* %t", answers.PaidForFamily))
 		}
-		if answers.Category != "" { // Category can be autofilled
-			summaryParts = append(summaryParts, fmt.Sprintf("*Category:* %s", tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, answers.Category)))
+		if answers.Category != "" { // Name can be autofilled
+			summaryParts = append(summaryParts, fmt.Sprintf("*Name:* %s", tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, answers.Category)))
 		}
 
 		if len(summaryParts) > 0 {
@@ -368,7 +368,7 @@ func (b *Bot) completeSession(chatID int64, session *session.UserSession) error 
 
 	// Send a thank-you message and confirmation
 	msg := tgbotapi.NewMessage(chatID,
-		fmt.Sprintf("Thank you for your responses!\n\nHere are your answers:\nName: %s\nAmount: %f\nCurrency: %s\nDate: %s\nIs Claimable: %t\nPaid for Family: %t\nCategory: %s",
+		fmt.Sprintf("Thank you for your responses!\n\nHere are your answers:\nName: %s\nAmount: %f\nCurrency: %s\nDate: %s\nIs Claimable: %t\nPaid for Family: %t\nName: %s",
 			session.Answers.Name, session.Answers.Amount, session.Answers.Currency, session.Answers.Date, session.Answers.IsClaimable, session.Answers.PaidForFamily, session.Answers.Category))
 
 	_, err := b.api.Send(msg)
