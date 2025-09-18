@@ -100,7 +100,14 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 		totalPages = (totalItems + limit - 1) / limit // Ceiling division
 	}
 
+	categories, err := storage.GetTransactionCountByCategory()
+	if err != nil {
+		log.Printf("Error fetching total expenses by category: %v", err)
+		return
+	}
+
 	response := transaction.PaginatedTransactionsResponse{
+		Categories:   categories,
 		Transactions: transactions,
 		CurrentPage:  page,
 		PageSize:     limit,
