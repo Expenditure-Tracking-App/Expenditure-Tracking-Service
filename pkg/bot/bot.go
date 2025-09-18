@@ -90,7 +90,7 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 			return err // Return the original error
 		}
 		var summaryMessageBuilder strings.Builder
-		summaryMessageBuilder.WriteString("Transaction Summary by Name:")
+		summaryMessageBuilder.WriteString("Transaction Summary by Category:")
 
 		if len(categoryCounts) == 0 {
 			summaryMessageBuilder.WriteString("\nNo transactions found.")
@@ -185,7 +185,7 @@ func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.U
 			summaryParts = append(summaryParts, fmt.Sprintf("*Paid for Family:* %t", answers.PaidForFamily))
 		}
 		if answers.Category != "" { // Name can be autofilled
-			summaryParts = append(summaryParts, fmt.Sprintf("*Name:* %s", tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, answers.Category)))
+			summaryParts = append(summaryParts, fmt.Sprintf("*Category:* %s", tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, answers.Category)))
 		}
 
 		if len(summaryParts) > 0 {
@@ -368,7 +368,7 @@ func (b *Bot) completeSession(chatID int64, session *session.UserSession) error 
 
 	// Send a thank-you message and confirmation
 	msg := tgbotapi.NewMessage(chatID,
-		fmt.Sprintf("Thank you for your responses!\n\nHere are your answers:\nName: %s\nAmount: %f\nCurrency: %s\nDate: %s\nIs Claimable: %t\nPaid for Family: %t\nName: %s",
+		fmt.Sprintf("Thank you for your responses!\n\nHere are your answers:\nName: %s\nAmount: %f\nCurrency: %s\nDate: %s\nIs Claimable: %t\nPaid for Family: %t\nCategory: %s",
 			session.Answers.Name, session.Answers.Amount, session.Answers.Currency, session.Answers.Date, session.Answers.IsClaimable, session.Answers.PaidForFamily, session.Answers.Category))
 
 	_, err := b.api.Send(msg)

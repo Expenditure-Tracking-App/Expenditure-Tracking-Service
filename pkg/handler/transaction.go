@@ -101,6 +101,10 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	categories, err := storage.GetTransactionCountByCategory()
+	if err != nil {
+		log.Printf("Error fetching total expenses by category: %v", err)
+		return
+	}
 
 	response := transaction.PaginatedTransactionsResponse{
 		Categories:   categories,
