@@ -184,7 +184,7 @@ func (b *Bot) askCurrentQuestion(chatID int64, userSessions map[int64]*session.U
 		if userSession.CurrentQuestion > session.QuestionPaidForFamily {
 			summaryParts = append(summaryParts, fmt.Sprintf("*Paid for Family:* %t", answers.PaidForFamily))
 		}
-		if answers.Category != "" { // Name can be autofilled
+		if answers.Category != "" { // Category can be autofilled
 			summaryParts = append(summaryParts, fmt.Sprintf("*Category:* %s", tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, answers.Category)))
 		}
 
