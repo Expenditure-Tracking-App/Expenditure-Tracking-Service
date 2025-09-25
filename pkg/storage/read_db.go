@@ -119,7 +119,7 @@ func GetAllTransactionsFromDB(
 }
 
 // GetTransactionCountByCategory retrieves the total number of transactions for each category.
-func GetTransactionCountByCategory() (map[string]float32, error) {
+func GetTransactionCountByCategory() ([]transaction.Category, error) {
 	querySQL := `
 		SELECT
 			category,
@@ -131,7 +131,7 @@ func GetTransactionCountByCategory() (map[string]float32, error) {
 		ORDER BY
 			total_cost DESC;
     `
-	categoryCounts := make(map[string]float32)
+	var categoryCounts []transaction.Category
 
 	currentDB, err := GetDB()
 	if err != nil {
@@ -158,7 +158,10 @@ func GetTransactionCountByCategory() (map[string]float32, error) {
 			log.Printf("Error scanning category count row: %v", err)
 			return nil, fmt.Errorf("failed to scan category count row: %w", err)
 		}
-		categoryCounts[category] = count
+		categoryCounts = append(categoryCounts, transaction.Category{
+			Name:        category,
+			TotalAmount: count,
+		})
 	}
 
 	if err = rows.Err(); err != nil {

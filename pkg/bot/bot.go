@@ -96,9 +96,9 @@ func (b *Bot) handleTextMessage(message *tgbotapi.Message, userSessions map[int6
 			summaryMessageBuilder.WriteString("\nNo transactions found.")
 		} else {
 			totalExpense := float32(0)
-			for category, count := range categoryCounts {
-				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %v: %v", category, count))
-				totalExpense += count
+			for _, category := range categoryCounts {
+				summaryMessageBuilder.WriteString(fmt.Sprintf("\n- %v: %v", category.Name, category.TotalAmount))
+				totalExpense += category.TotalAmount
 			}
 			summaryMessageBuilder.WriteString(fmt.Sprintf("\n- Total Expenses: %v", totalExpense))
 		}

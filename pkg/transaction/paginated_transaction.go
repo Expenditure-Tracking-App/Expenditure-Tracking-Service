@@ -2,6 +2,7 @@ package transaction
 
 // PaginatedTransactionsResponse defines the structure for paginated transaction results.
 type PaginatedTransactionsResponse struct {
+	Categories   []Category    `json:"categories"`
 	Transactions []Transaction `json:"transactions"`
 	CurrentPage  int           `json:"currentPage"`
 	PageSize     int           `json:"pageSize"`
