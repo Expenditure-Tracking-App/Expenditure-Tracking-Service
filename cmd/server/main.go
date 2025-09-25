@@ -41,7 +41,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handler.HealthCheckHandler)
-	mux.HandleFunc("/api/v1/transactions", handler.TransactionsHandler)
+	mux.HandleFunc("/api/v1/transactions/", handler.TransactionsHandler)
 
 	prefilledHandler := handler.GetPrefilledExpensesHandler(cfg.FrequentExpenses)
 	mux.HandleFunc("/api/v1/prefilled-expenses", prefilledHandler)

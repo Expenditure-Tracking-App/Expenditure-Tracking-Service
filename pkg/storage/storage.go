@@ -106,3 +106,34 @@ func InsertTransaction(t transaction.Transaction) error {
 	log.Printf("Successfully inserted transaction with ID: %d", insertedID)
 	return nil
 }
+
+// UpdateTransaction updates an existing transaction in the database.
+func UpdateTransaction(id int, t transaction.Transaction) error {
+	updateSQL := `
+        UPDATE transactions
+        SET name = $1, amount = $2, currency = $3, date = $4, category = $5
+        WHERE id = $6;
+    `
+
+	currentDB, err := GetDB()
+	if err != nil {
+		return fmt.Errorf("failed to get DB connection: %w", err)
+	}
+
+	_, err = currentDB.Exec(
+		updateSQL,
+		t.Name,
+		t.Amount,
+		t.Currency,
+		t.Date,
+		t.Category,
+		id,
+	)
+
+	if err != nil {
+		return fmt.Errorf("database update failed: %w", err)
+	}
+
+	log.Printf("Successfully updated transaction with ID: %d", id)
+	return nil
+}
