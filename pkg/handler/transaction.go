@@ -8,6 +8,7 @@ import (
 	"main/pkg/transaction"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type MessageResponse struct {
@@ -154,6 +155,38 @@ func createTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func updateTransactionHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/v1/transactions/")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid transaction ID", http.StatusBadRequest)
+		return
+	}
+
+	var updatedTransaction transaction.Transaction
+	if err := json.NewDecoder(r.Body).Decode(&updatedTransaction); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := storage.UpdateTransaction(id, updatedTransaction); err != nil {
+		log.Printf("Error updating transaction: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Invalidate cache
+	c.Flush()
+	log.Println("Cache flushed due to updated transaction")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	response := MessageResponse{Message: "Transaction updated successfully"}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response JSON: %v", err)
+	}
+}
+
 // TransactionsHandler routes to different handlers based on the HTTP method.
 func TransactionsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -161,6 +194,8 @@ func TransactionsHandler(w http.ResponseWriter, r *http.Request) {
 		getTransactionsHandler(w, r)
 	case http.MethodPost:
 		createTransactionHandler(w, r)
+	case http.MethodPut:
+		updateTransactionHandler(w, r)
 	default:
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 	}
