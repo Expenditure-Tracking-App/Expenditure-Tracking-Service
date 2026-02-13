@@ -22,6 +22,9 @@ jobs:
       - name: Build
         run: go build -v ./...
 
+      - name: Migrate golangci-lint config
+        run: golangci-lint migrate
+
       - name: Lint
         uses: golangci/golangci-lint-action@v9.2.0
         with:
