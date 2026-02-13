@@ -16,17 +16,12 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.26'
-          cache: true
+          go-version: stable
 
       - name: Build
         run: go build -v ./...
 
-      - name: Migrate golangci-lint config
-        run: golangci-lint migrate
-
       - name: Lint
-        uses: golangci/golangci-lint-action@v9.2.0
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v2.9.0
-          install-mode: binary
+          version: latest
