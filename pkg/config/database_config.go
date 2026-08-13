@@ -16,8 +16,8 @@ type FeaturesConfig struct {
 	SaveToDB bool `yaml:"save_to_database"`
 }
 
-/*type ServerConfig struct {
+// ServerConfig defines the HTTP server configuration
+type ServerConfig struct {
 	Port     int    `yaml:"port"`
 	LogLevel string `yaml:"logLevel"`
 }
-*/

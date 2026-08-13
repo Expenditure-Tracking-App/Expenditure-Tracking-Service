@@ -421,23 +421,26 @@ func (b *Bot) handleCallbackQuery(callbackQuery *tgbotapi.CallbackQuery, userSes
 	// I've included a refactored version below that is much cleaner.
 	switch callbackQuery.Data {
 	case "yes":
-		if userSession.CurrentQuestion == session.QuestionIsClaimable {
+		switch userSession.CurrentQuestion {
+		case session.QuestionIsClaimable:
 			userSession.Answers.IsClaimable = true
-		} else if userSession.CurrentQuestion == session.QuestionPaidForFamily {
+		case session.QuestionPaidForFamily:
 			userSession.Answers.PaidForFamily = true
 		}
 	case "no":
-		if userSession.CurrentQuestion == session.QuestionIsClaimable {
+		switch userSession.CurrentQuestion {
+		case session.QuestionIsClaimable:
 			userSession.Answers.IsClaimable = false
-		} else if userSession.CurrentQuestion == session.QuestionPaidForFamily {
+		case session.QuestionPaidForFamily:
 			userSession.Answers.PaidForFamily = false
 		}
 	default:
-		if userSession.CurrentQuestion == session.QuestionName {
+		switch userSession.CurrentQuestion {
+		case session.QuestionName:
 			userSession.Answers.Name = callbackQuery.Data
-		} else if userSession.CurrentQuestion == session.QuestionCurrency {
+		case session.QuestionCurrency:
 			userSession.Answers.Currency = callbackQuery.Data
-		} else if userSession.CurrentQuestion == session.QuestionCategory {
+		case session.QuestionCategory:
 			userSession.Answers.Category = callbackQuery.Data
 		}
 	}

@@ -2,6 +2,7 @@ package config
 
 // Top-level config struct
 type Config struct {
+	Server              ServerConfig      `yaml:"server"`
 	FeaturesConfig      FeaturesConfig    `yaml:"features"`
 	Database            DatabaseConfig    `yaml:"database"`
 	TelegramConfig      TelegramConfig    `yaml:"telegram"`

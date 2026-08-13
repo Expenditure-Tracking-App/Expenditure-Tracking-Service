@@ -23,10 +23,17 @@ https://github.com/user-attachments/assets/df75c3f9-4294-48a9-9c7d-980fc670f249
 
 ## Running the program
 
-To run the program
+To run the Telegram bot:
+```bash
+go run cmd/bot/main.go
 ```
-go run main
+
+To run the HTTP server:
+```bash
+go run cmd/server/main.go
 ```
+
+Both require `config.yaml` in the working directory (or set `CONFIG_PATH` env var to specify a custom path).
 
 Make commands
 

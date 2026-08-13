@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+// MessageResponse represents a simple message response
 type MessageResponse struct {
 	Message string `json:"message"`
 }
@@ -40,7 +41,7 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 		val, err := strconv.ParseBool(claimableStr)
 		if err != nil {
 			log.Printf("Invalid boolean value for is_claimable: %s. Error: %v", claimableStr, err)
-			http.Error(w, "Invalid value for 'is_claimable' parameter. Use 'true' or 'false'.", http.StatusBadRequest)
+			NewErrorResponse(w, http.StatusBadRequest, "Invalid value for 'is_claimable' parameter. Use 'true' or 'false'.")
 			return
 		}
 		isClaimableFilter = &val
@@ -51,7 +52,7 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 		val, err := strconv.ParseBool(paidForFamilyStr)
 		if err != nil {
 			log.Printf("Invalid boolean value for paid_for_family: %s. Error: %v", paidForFamilyStr, err)
-			http.Error(w, "Invalid value for 'paid_for_family' parameter. Use 'true' or 'false'.", http.StatusBadRequest)
+			NewErrorResponse(w, http.StatusBadRequest, "Invalid value for 'paid_for_family' parameter. Use 'true' or 'false'.")
 			return
 		}
 		paidForFamilyFilter = &val
@@ -69,7 +70,7 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 		page, err = strconv.Atoi(pageStr)
 		if err != nil || page < 1 {
 			log.Printf("Invalid value for 'page' parameter: %s. Must be a positive integer.", pageStr)
-			http.Error(w, "Invalid value for 'page' parameter. Must be a positive integer.", http.StatusBadRequest)
+			NewErrorResponse(w, http.StatusBadRequest, "Invalid value for 'page' parameter. Must be a positive integer.")
 			return
 		}
 	}
@@ -78,7 +79,7 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 		limit, err = strconv.Atoi(limitStr)
 		if err != nil || limit < 1 {
 			log.Printf("Invalid value for 'limit' parameter: %s. Must be a positive integer.", limitStr)
-			http.Error(w, "Invalid value for 'limit' parameter. Must be a positive integer.", http.StatusBadRequest)
+			NewErrorResponse(w, http.StatusBadRequest, "Invalid value for 'limit' parameter. Must be a positive integer.")
 			return
 		}
 	}
@@ -92,7 +93,7 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		log.Printf("Error fetching transactions: %v", err)
-		http.Error(w, "Internal Server Error while fetching transactions.", http.StatusInternalServerError)
+		NewErrorResponse(w, http.StatusInternalServerError, "Internal Server Error while fetching transactions.")
 		return
 	}
 
@@ -133,13 +134,13 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 func createTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	var newTransaction transaction.Transaction
 	if err := json.NewDecoder(r.Body).Decode(&newTransaction); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		NewErrorResponse(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	if err := storage.InsertTransaction(newTransaction); err != nil {
 		log.Printf("Error inserting transaction: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		NewErrorResponse(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 
@@ -159,19 +160,19 @@ func updateTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/api/v1/transactions/")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "Invalid transaction ID", http.StatusBadRequest)
+		NewErrorResponse(w, http.StatusBadRequest, "Invalid transaction ID")
 		return
 	}
 
 	var updatedTransaction transaction.Transaction
 	if err := json.NewDecoder(r.Body).Decode(&updatedTransaction); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		NewErrorResponse(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	if err := storage.UpdateTransaction(id, updatedTransaction); err != nil {
 		log.Printf("Error updating transaction: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		NewErrorResponse(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 
@@ -197,6 +198,6 @@ func TransactionsHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		updateTransactionHandler(w, r)
 	default:
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		NewErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }

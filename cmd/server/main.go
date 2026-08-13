@@ -2,22 +2,33 @@ package main
 
 import "C"
 import (
+	"context"
 	"fmt"
 	"github.com/rs/cors"
 	"gopkg.in/yaml.v3"
 	"log"
 	"main/pkg/config"
 	"main/pkg/handler"
-	"main/pkg/storage" // Assuming your storage functions are here
-	"net/http"         // The core HTTP package
-	"os"               // To potentially read port from environment
+	"main/pkg/storage"
+	"net/http"
+	"os"
+	"os/signal"
 	"regexp"
+	"strconv"
+	"syscall"
+	"time"
 )
 
 // --- Main Function ---
 
 func main() {
-	yamlFile, err := os.ReadFile("config.yaml")
+	// Support CONFIG_PATH env var for custom config location
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "config.yaml"
+	}
+
+	yamlFile, err := os.ReadFile(configPath)
 	if err != nil {
 		log.Fatalf("Error reading YAML file: %v", err)
 	}
@@ -58,16 +69,47 @@ func main() {
 
 	corsMiddlewareHandler := corsMiddleware.Handler(mux)
 
-	port := "8081"
+	// Use port from config if available, otherwise default to 8081
+	port := strconv.Itoa(cfg.Server.Port)
+	if port == "0" {
+		port = "8081"
+	}
 	serverAddr := fmt.Sprintf(":%s", port)
+
+	srv := &http.Server{
+		Addr:         serverAddr,
+		Handler:      corsMiddlewareHandler,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
 
 	log.Printf("Starting HTTP server on %s", serverAddr)
 
 	log.Printf("The available endpoints:\nHealth check endpoint: localhost:%v/health\nTransactions API endpoint: localhost:%v/api/v1/transactions",
 		port, port)
 
-	err = http.ListenAndServe(serverAddr, corsMiddlewareHandler)
-	if err != nil {
-		log.Fatalf("HTTP server failed to start: %v", err)
+	// Start server in a goroutine
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("HTTP server failed to start: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down HTTP server...")
+
+	// Give outstanding requests 30 seconds to complete
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("HTTP server graceful shutdown error: %v", err)
 	}
+
+	log.Println("HTTP server exited")
 }

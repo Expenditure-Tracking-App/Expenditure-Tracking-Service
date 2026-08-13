@@ -14,12 +14,20 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
 func main() {
+	// Support CONFIG_PATH env var for custom config location
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "config.yaml"
+	}
+
 	// Read the YAML file content
-	yamlFile, err := os.ReadFile("config.yaml")
+	yamlFile, err := os.ReadFile(configPath)
 	if err != nil {
 		log.Fatalf("Error reading YAML file: %v", err)
 	}
@@ -31,6 +39,12 @@ func main() {
 	err = yaml.Unmarshal(yamlFile, &cfg)
 	if err != nil {
 		log.Fatalf("Error unmarshalling YAML: %v", err)
+	}
+
+	// Allow Telegram token to be overridden via environment variable
+	telegramToken := os.Getenv("TELEGRAM_BOT_TOKEN")
+	if telegramToken == "" {
+		telegramToken = cfg.TelegramConfig.Token
 	}
 
 	if cfg.FeaturesConfig.SaveToDB {
@@ -53,13 +67,34 @@ func main() {
 		fmt.Printf("Predicted label: %s (%.2f%% confidence)\n", label, score*100)
 	}
 
-	myBot, err := bot.NewBot(cfg.TelegramConfig.Token, cfg.FeaturesConfig, cfg.FrequentExpenses, cfg.ExpenseCategories, cfg.SupportedCurrencies)
+	myBot, err := bot.NewBot(telegramToken, cfg.FeaturesConfig, cfg.FrequentExpenses, cfg.ExpenseCategories, cfg.SupportedCurrencies)
 	if err != nil {
 		log.Panic(err)
 	}
 
 	userSessions := make(map[int64]*session.UserSession)
-	myBot.StartListening(userSessions)
+
+	// Start bot in a goroutine
+	go func() {
+		log.Println("Starting Telegram bot...")
+		myBot.StartListening(userSessions)
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the bot
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down Telegram bot...")
+
+	// Stop the bot gracefully (if the bot has a Stop method)
+	// If not, the bot will stop when the main function exits
+	// You may want to add a Stop method to the bot package
+
+	// Give pending operations time to complete
+	time.Sleep(2 * time.Second)
+
+	log.Println("Telegram bot exited")
 }
 
 func startPythonService() {
